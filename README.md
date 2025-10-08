@@ -280,6 +280,8 @@ Contributions welcome! Please ensure:
 
 ## Resources
 
-- [IHO S-57 Standard](https://iho.int/en/standards-and-specifications)
-- [S-57 Appendix A - Object Catalogue](https://iho.int/uploads/user/pubs/standards/s-57/31ApA.pdf)
-- [ISO 8211 Summary](https://iho.int/uploads/user/pubs/standards/s-100/S100WG7-4.16_2022_EN_ISO_IEC8211_Summary.pdf)
+- [IHO S-57 Edition 3.1 Main Specification](https://iho.int/uploads/user/pubs/standards/s-57/31Main.pdf)
+- [S-57 Appendix A - Object Catalogue Chapter 1](https://iho.int/uploads/user/pubs/standards/s-57/31ApAch1.pdf)
+- [S-57 Appendix A - Object Catalogue Chapter 2 (Attributes)](https://iho.int/uploads/user/pubs/standards/s-57/31ApAch2.pdf)
+- [ISO/IEC 8211 Summary (IHO)](https://iho.int/uploads/user/Services%20and%20Standards/S-100WG/S-100WG7/S100WG7-4.16_2022_EN_ISO_IEC8211_Summary.pdf)
+- [IHO Standards and Specifications](https://iho.int/en/standards-and-specifications)
