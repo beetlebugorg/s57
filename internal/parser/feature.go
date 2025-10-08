@@ -282,7 +282,10 @@ type spatialRef struct {
 // featureRecord represents a parsed S-57 feature record
 // S-57 §7.6: Feature records contain feature identification and attributes
 type featureRecord struct {
-	ID            int64                  // Feature ID from FOID
+	ID            int64                  // Feature ID from FOID (for backward compatibility, use FIDN)
+	AGEN          uint16                 // Producing agency from FOID
+	FIDN          uint32                 // Feature identification number from FOID
+	FIDS          uint16                 // Feature identification subdivision from FOID
 	ObjectClass   int                    // S-57 object class code (DEPARE=42, etc.)
 	GeomPrim      int                    // Geometric primitive from FRID (1=Point, 2=Line, 3=Area, 255=N/A)
 	Group         int                    // Group code from FRID
@@ -341,10 +344,19 @@ func parseFeatureRecord(record *iso8211.DataRecord) *featureRecord {
 	featureRec.UpdateInstr = int(fridData[11])
 
 	// Parse FOID (Feature Object Identifier) for feature ID
-	if foidData, ok := record.Fields["FOID"]; ok && len(foidData) >= 10 {
-		// FOID contains AGEN (agency), FIDN (feature ID), FIDS (feature ID subdivision)
-		// Use FIDN as primary ID (4 bytes at offset 2)
-		featureRec.ID = int64(binary.LittleEndian.Uint32(foidData[2:6]))
+	// S-57 §7.6.2: FOID structure is AGEN (2 bytes) + FIDN (4 bytes) + FIDS (2 bytes)
+	if foidData, ok := record.Fields["FOID"]; ok && len(foidData) >= 8 {
+		// AGEN (2 bytes at offset 0) - Producing agency code
+		featureRec.AGEN = binary.LittleEndian.Uint16(foidData[0:2])
+
+		// FIDN (4 bytes at offset 2) - Feature identification number
+		featureRec.FIDN = binary.LittleEndian.Uint32(foidData[2:6])
+
+		// FIDS (2 bytes at offset 6) - Feature identification subdivision
+		featureRec.FIDS = binary.LittleEndian.Uint16(foidData[6:8])
+
+		// Set ID for backward compatibility (use FIDN)
+		featureRec.ID = int64(featureRec.FIDN)
 	}
 
 	// Parse ATTF (Feature Record Attribute) for attributes

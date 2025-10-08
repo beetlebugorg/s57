@@ -69,6 +69,14 @@ func applyUpdates(baseChart *chartData, updateFiles []string, params datasetPara
 	return nil
 }
 
+// featureID uniquely identifies a feature using the composite key from FOID
+// Per S-57 §7.6.2, the unique identifier is (AGEN, FIDN, FIDS), not just FIDN
+type featureID struct {
+	AGEN uint16 // Producing agency
+	FIDN uint32 // Feature identification number
+	FIDS uint16 // Feature identification subdivision
+}
+
 // chartData holds the intermediate chart state during update merging
 type chartData struct {
 	features       []*featureRecord
@@ -76,7 +84,8 @@ type chartData struct {
 	metadata       *datasetMetadata
 
 	// Index for fast lookup during updates
-	featuresByID map[int64]*featureRecord
+	// CRITICAL: Must use composite key (AGEN, FIDN, FIDS) because FIDN alone is not unique
+	featuresByID map[featureID]*featureRecord
 }
 
 // applyUpdate applies a single update file to the chart data
@@ -112,6 +121,23 @@ func applyUpdate(chart *chartData, updateFile string, params datasetParams) erro
 		}
 	}
 
+	// Check if update contains new DSID metadata and merge it
+	if updatedDSID := extractDSID(isoFile); updatedDSID != nil {
+		// Merge updated metadata fields
+		// Per S-57 spec, update files can modify UPDN (update number) and UADT (update date)
+		// EDTN (edition) and DSNM (dataset name) should NOT change in updates
+		if updatedDSID.updn != "" {
+			chart.metadata.updn = updatedDSID.updn
+		}
+		if updatedDSID.uadt != "" {
+			chart.metadata.uadt = updatedDSID.uadt
+		}
+		// Update issue date if present
+		if updatedDSID.isdt != "" {
+			chart.metadata.isdt = updatedDSID.isdt
+		}
+	}
+
 	return nil
 }
 
@@ -125,24 +151,38 @@ func applyFeatureUpdate(chart *chartData, record *iso8211.DataRecord, fridData [
 		return fmt.Errorf("failed to parse feature record")
 	}
 
+	// Create composite key from FOID fields
+	key := featureID{
+		AGEN: featureRec.AGEN,
+		FIDN: featureRec.FIDN,
+		FIDS: featureRec.FIDS,
+	}
+
 	switch ruin {
 	case UpdateInsert:
-		// Add new feature
-		if _, exists := chart.featuresByID[featureRec.ID]; exists {
-			return fmt.Errorf("INSERT: feature %d already exists", featureRec.ID)
+		// Add or replace feature
+		// Note: Some ENC producers use INSERT even when the record exists in the base
+		// This is treated as an upsert operation
+		if existing, exists := chart.featuresByID[key]; exists {
+			// Replace existing feature
+			*existing = *featureRec
+		} else {
+			// Add new feature
+			chart.features = append(chart.features, featureRec)
+			chart.featuresByID[key] = featureRec
 		}
-		chart.features = append(chart.features, featureRec)
-		chart.featuresByID[featureRec.ID] = featureRec
 
 	case UpdateDelete:
 		// Remove existing feature
-		existing, exists := chart.featuresByID[featureRec.ID]
+		existing, exists := chart.featuresByID[key]
 		if !exists {
-			return fmt.Errorf("DELETE: feature %d not found", featureRec.ID)
+			// Feature doesn't exist - this is a no-op
+			// This can happen if the base cell doesn't have the feature being deleted
+			return nil
 		}
 
 		// Remove from index
-		delete(chart.featuresByID, featureRec.ID)
+		delete(chart.featuresByID, key)
 
 		// Remove from slice
 		for i, f := range chart.features {
@@ -154,15 +194,16 @@ func applyFeatureUpdate(chart *chartData, record *iso8211.DataRecord, fridData [
 
 	case UpdateModify:
 		// Update existing feature
-		existing, exists := chart.featuresByID[featureRec.ID]
+		existing, exists := chart.featuresByID[key]
 		if !exists {
-			return fmt.Errorf("MODIFY: feature %d not found", featureRec.ID)
+			return fmt.Errorf("MODIFY: feature (AGEN=%d, FIDN=%d, FIDS=%d) not found",
+				featureRec.AGEN, featureRec.FIDN, featureRec.FIDS)
 		}
 
 		// Replace feature data
 		*existing = *featureRec
 		// Keep reference in index
-		chart.featuresByID[featureRec.ID] = existing
+		chart.featuresByID[key] = existing
 
 	default:
 		return fmt.Errorf("unknown RUIN value for feature: %d", ruin)
@@ -189,16 +230,16 @@ func applySpatialUpdate(chart *chartData, record *iso8211.DataRecord, vridData [
 
 	switch ruin {
 	case UpdateInsert:
-		// Add new spatial record
-		if _, exists := chart.spatialRecords[key]; exists {
-			return fmt.Errorf("INSERT: spatial record %v already exists", key)
-		}
+		// Add or replace spatial record
+		// Note: Some ENC producers use INSERT even when the record exists in the base
+		// This is treated as an upsert operation
 		chart.spatialRecords[key] = spatialRec
 
 	case UpdateDelete:
 		// Remove existing spatial record
 		if _, exists := chart.spatialRecords[key]; !exists {
-			return fmt.Errorf("DELETE: spatial record %v not found", key)
+			// Record doesn't exist - this is a no-op
+			return nil
 		}
 		delete(chart.spatialRecords, key)
 

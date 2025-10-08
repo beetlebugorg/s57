@@ -42,6 +42,10 @@ type ParseOptions struct {
 	// ObjectClassFilter: if non-empty, only extract these object classes
 	// Empty means extract all supported types
 	ObjectClassFilter []string
+
+	// ApplyUpdates: if true, automatically discover and apply update files (.001, .002, etc.)
+	// Default: true
+	ApplyUpdates bool
 }
 
 // DefaultParseOptions returns parse options with defaults
@@ -50,6 +54,7 @@ func DefaultParseOptions() ParseOptions {
 		SkipUnknownFeatures: false,
 		ValidateGeometry:    true,
 		ObjectClassFilter:   nil,
+		ApplyUpdates:        true,
 	}
 }
 
@@ -74,40 +79,147 @@ func (p *defaultParser) Parse(filename string) (*Chart, error) {
 
 // ParseWithOptions parses with custom options
 func (p *defaultParser) ParseWithOptions(filename string, opts ParseOptions) (*Chart, error) {
+	// 1. Parse base file and extract raw records
+	baseData, params, metadata, err := parseBaseFile(filename, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Discover and apply updates if enabled
+	if opts.ApplyUpdates {
+		updateFiles, err := findUpdateFiles(filename)
+		if err != nil {
+			return nil, fmt.Errorf("failed to discover update files: %w", err)
+		}
+		if len(updateFiles) > 0 {
+			if err := applyUpdates(baseData, updateFiles, params); err != nil {
+				return nil, fmt.Errorf("failed to apply updates: %w", err)
+			}
+		}
+	}
+
+	// 3. Build final chart with geometries
+	return buildChart(baseData, metadata, params, opts)
+}
+
+// parseBaseFile extracts raw feature and spatial records without building geometries.
+// This allows update files to be applied before geometry construction.
+func parseBaseFile(filename string, opts ParseOptions) (*chartData, datasetParams, *datasetMetadata, error) {
 	// Open ISO 8211 file
 	reader, err := iso8211.NewReader(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, datasetParams{}, nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer reader.Close()
 
 	// Parse ISO 8211 structure
 	isoFile, err := reader.Parse()
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse ISO 8211: %w", err)
+		return nil, datasetParams{}, nil, fmt.Errorf("failed to parse ISO 8211: %w", err)
 	}
 
 	// Extract dataset parameters (COMF, SOMF, etc.) from DSPM record
-	datasetParams := extractDatasetParams(isoFile)
+	params := extractDatasetParams(isoFile)
 
 	// Extract dataset metadata from DSID record
 	metadata := extractDSID(isoFile)
 
-	// Extract features from data records
-	features, err := p.extractFeatures(isoFile, datasetParams, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract features: %w", err)
+	// Extract feature records (without geometry)
+	features := []*featureRecord{}
+	featuresByID := make(map[featureID]*featureRecord)
+	for _, record := range isoFile.Records {
+		if featureRec := parseFeatureRecord(record); featureRec != nil {
+			features = append(features, featureRec)
+			// Create composite key from FOID fields
+			key := featureID{
+				AGEN: featureRec.AGEN,
+				FIDN: featureRec.FIDN,
+				FIDS: featureRec.FIDS,
+			}
+			featuresByID[key] = featureRec
+		}
 	}
 
-	// Create chart
-	chart := &Chart{
-		metadata: metadata,
-		Features: features,
+	// Extract spatial records
+	spatialRecords := make(map[spatialKey]*spatialRecord)
+	for _, record := range isoFile.Records {
+		if spatialRec := parseSpatialRecordWithParams(record, params); spatialRec != nil {
+			key := spatialKey{RCNM: int(spatialRec.RecordType), RCID: spatialRec.ID}
+			spatialRecords[key] = spatialRec
+		}
 	}
 
-	return chart, nil
+	return &chartData{
+		features:       features,
+		spatialRecords: spatialRecords,
+		metadata:       metadata,
+		featuresByID:   featuresByID,
+	}, params, metadata, nil
 }
 
+// buildChart constructs final Chart with geometries from merged data.
+// This is called after all updates have been applied to the raw records.
+func buildChart(data *chartData, metadata *datasetMetadata, params datasetParams, opts ParseOptions) (*Chart, error) {
+	// Build geometries for all features
+	finalFeatures := []Feature{}
+
+	for _, featureRec := range data.features {
+		// Check object class filter
+		if len(opts.ObjectClassFilter) > 0 {
+			objClass, _ := ObjectClassToString(featureRec.ObjectClass)
+			if !contains(opts.ObjectClassFilter, objClass) {
+				continue // Filtered out
+			}
+		}
+
+		// Construct geometry from spatial records
+		geometry, err := constructGeometry(featureRec, data.spatialRecords)
+		if err != nil {
+			if opts.SkipUnknownFeatures {
+				continue // Skip this feature
+			}
+			// Add context about which feature failed
+			objClass, _ := ObjectClassToString(featureRec.ObjectClass)
+			return nil, fmt.Errorf("feature ID=%d, ObjectClass=%s (OBJL=%d), GeomPrim=%d: %w",
+				featureRec.ID, objClass, featureRec.ObjectClass, featureRec.GeomPrim, err)
+		}
+
+		// Apply geometry validation if enabled
+		if opts.ValidateGeometry {
+			if err := ValidateGeometry(&geometry); err != nil {
+				if opts.SkipUnknownFeatures {
+					continue
+				}
+				return nil, fmt.Errorf("feature %d: %w", featureRec.ID, err)
+			}
+		}
+
+		// Convert object class code to string
+		objClass, err := ObjectClassToString(featureRec.ObjectClass)
+		if err != nil {
+			if opts.SkipUnknownFeatures {
+				continue
+			}
+			return nil, err
+		}
+
+		// Create feature
+		feature := Feature{
+			ID:          featureRec.ID,
+			ObjectClass: objClass,
+			Geometry:    geometry,
+			Attributes:  featureRec.Attributes,
+		}
+
+		finalFeatures = append(finalFeatures, feature)
+	}
+
+	return &Chart{
+		metadata:       metadata,
+		Features:       finalFeatures,
+		spatialRecords: data.spatialRecords, // Keep for potential future updates
+	}, nil
+}
 
 // extractChartID extracts the chart identifier from DSID record.
 //
@@ -289,94 +401,6 @@ func parseDSID(data []byte) *datasetMetadata {
 	return dsid
 }
 
-// extractFeatures extracts S-57 features from ISO 8211 records.
-//
-// S-57 separates geometry from attributes: feature records contain object metadata
-// (object class, attributes) while spatial records contain the actual coordinates.
-// Feature records reference spatial records via pointers (FSPT field).
-//
-// This two-step process:
-//  1. Index all spatial records by (RCNM, RCID) composite key for fast lookup
-//  2. Parse feature records and construct geometries from referenced spatial records
-//
-// The composite key is required because RCID alone is not unique - it's only unique
-// within each record type (RCNM). See S-57 Part 3 §2.2 (31Main.pdf p3.7).
-//
-// Reference: S-57 Part 3 §4.7 (31Main.pdf p3.19-3.22): Feature to spatial record
-// pointer field explaining the FSPT structure and how features reference geometry.
-func (p *defaultParser) extractFeatures(isoFile *iso8211.ISO8211File, params datasetParams, opts ParseOptions) ([]Feature, error) {
-	features := make([]Feature, 0)
-
-	// Build spatial record index using composite key (RCNM, RCID).
-	// RCID is only unique within a record type, so we must include RCNM.
-	spatialRecords := make(map[spatialKey]*spatialRecord)
-	for _, record := range isoFile.Records {
-		if spatial := parseSpatialRecordWithParams(record, params); spatial != nil {
-			key := spatialKey{RCNM: int(spatial.RecordType), RCID: spatial.ID}
-			spatialRecords[key] = spatial
-		}
-	}
-
-	// Parse feature records
-	for _, record := range isoFile.Records {
-		featureRec := parseFeatureRecord(record)
-		if featureRec == nil {
-			continue // Not a feature record
-		}
-
-		// Check object class filter
-		if len(opts.ObjectClassFilter) > 0 {
-			objClass, _ := ObjectClassToString(featureRec.ObjectClass)
-			if !contains(opts.ObjectClassFilter, objClass) {
-				continue // Filtered out
-			}
-		}
-
-		// Construct geometry from spatial records
-		geometry, err := constructGeometry(featureRec, spatialRecords)
-		if err != nil {
-			if opts.SkipUnknownFeatures {
-				// TODO: Log skipped feature for debugging
-				continue // Skip this feature
-			}
-			// Add context about which feature failed
-			objClass, _ := ObjectClassToString(featureRec.ObjectClass)
-			return nil, fmt.Errorf("feature ID=%d, ObjectClass=%s (OBJL=%d), GeomPrim=%d: %w",
-				featureRec.ID, objClass, featureRec.ObjectClass, featureRec.GeomPrim, err)
-		}
-
-		// Validate geometry if requested
-		if opts.ValidateGeometry {
-			if err := ValidateGeometry(&geometry); err != nil {
-				if opts.SkipUnknownFeatures {
-					continue
-				}
-				return nil, fmt.Errorf("feature %d: %w", featureRec.ID, err)
-			}
-		}
-
-		// Convert object class code to string
-		objClass, err := ObjectClassToString(featureRec.ObjectClass)
-		if err != nil {
-			if opts.SkipUnknownFeatures {
-				continue
-			}
-			return nil, err
-		}
-
-		// Create feature
-		feature := Feature{
-			ID:          featureRec.ID,
-			ObjectClass: objClass,
-			Geometry:    geometry,
-			Attributes:  featureRec.Attributes,
-		}
-
-		features = append(features, feature)
-	}
-
-	return features, nil
-}
 
 // SupportedObjectClasses returns list of supported S-57 object classes
 func (p *defaultParser) SupportedObjectClasses() []string {

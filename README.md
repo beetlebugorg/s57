@@ -17,6 +17,8 @@ S-57 is the data transfer standard developed by the International Hydrographic O
 - ✅ Feature attributes extraction
 - ✅ Dataset metadata (DSID) parsing
 - ✅ Coordinate transformation (COMF/SOMF multiplication factors)
+- ✅ **Automatic update file merging (.001, .002, etc.)**
+- ✅ **Full support for INSERT/DELETE/MODIFY operations**
 - ✅ Built on ISO 8211 parser
 - ✅ Zero unsafe code, pure Go
 - ✅ Comprehensive test coverage
@@ -140,6 +142,54 @@ opts := s57.ParseOptions{
 collection, err := parser.ParseWithOptions("chart.000", opts)
 ```
 
+## Update File Handling
+
+S-57 charts are distributed as a base cell (.000) with optional updates (.001, .002, etc.). The parser automatically discovers and applies all sequential updates in the same directory.
+
+### Automatic Update Application (Default)
+
+```go
+// Automatically finds and applies GB5X01SW.001, .002, etc.
+chart, err := parser.Parse("GB5X01SW.000")
+```
+
+The parser will:
+1. Discover all sequential update files (.001, .002, .003, etc.)
+2. Stop at the first gap in the sequence
+3. Apply updates in order before building geometries
+4. Update metadata (update number, dates) to reflect the latest update
+
+### Disable Update Application
+
+```go
+opts := s57.ParseOptions{
+    ApplyUpdates: false, // Parse only base cell
+}
+chart, err := parser.ParseWithOptions("GB5X01SW.000", opts)
+```
+
+### Update Operations
+
+Updates use the RUIN (Record Update Instruction) field per S-57 specification:
+
+- **INSERT (1)**: Add new features or spatial records
+- **DELETE (2)**: Remove existing records
+- **MODIFY (3)**: Update existing records
+
+The parser applies these operations at the record level before constructing geometries, ensuring all spatial topology is correctly maintained.
+
+### Update Discovery
+
+The parser looks for updates in sequence until the first gap:
+
+**Example:**
+- Base: `GB5X01SW.000`
+- Finds: `GB5X01SW.001`, `GB5X01SW.002`, `GB5X01SW.003`
+- Missing: `GB5X01SW.004`
+- Stops: Parser applies .001, .002, .003 only
+
+This ensures updates are always applied in the correct order.
+
 ## S-57 Feature Types
 
 Common S-57 object classes supported:
@@ -178,7 +228,7 @@ S-57 files typically have extensions:
 - `.000` - Base cell (full dataset)
 - `.001`, `.002`, etc. - Update files
 
-Update files are applied sequentially to the base cell.
+The parser automatically discovers and applies update files when parsing a base cell (see [Update File Handling](#update-file-handling) above).
 
 ## Dependencies
 
