@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 
 	"github.com/beetlebugorg/iso8211/pkg/v1"
 )
@@ -227,16 +228,29 @@ func parseDSID(data []byte) *datasetMetadata {
 	// UPDN - Update number. String showing cumulative update count (e.g., "5").
 	dsid.updn = extractASCII()
 
-	// UADT - Update application date. Format: YYYYMMDD. All updates on or before this
-	// date must be applied to have current data.
-	dsid.uadt = extractASCII()
+	// UADT - Update application date. A(8) fixed-length field. Format: YYYYMMDD.
+	// All updates on or before this date must be applied to have current data.
+	// This is a FIXED 8-byte ASCII field, NOT 0x1F-terminated.
+	if offset+8 <= len(data) {
+		dsid.uadt = strings.TrimRight(string(data[offset:offset+8]), "\x00 ")
+		offset += 8
+	}
 
-	// ISDT - Issue date. Format: YYYYMMDD. When the dataset was released by producer.
-	dsid.isdt = extractASCII()
+	// ISDT - Issue date. A(8) fixed-length field. Format: YYYYMMDD.
+	// When the dataset was released by producer.
+	// This is a FIXED 8-byte ASCII field, NOT 0x1F-terminated.
+	if offset+8 <= len(data) {
+		dsid.isdt = strings.TrimRight(string(data[offset:offset+8]), "\x00 ")
+		offset += 8
+	}
 
-	// STED - Edition number of S-57 standard used (e.g., "03.1").
-	// Tells us which version of S-57 specification to interpret the data with.
-	dsid.sted = extractASCII()
+	// STED - Edition number of S-57 standard. R(4) fixed-length field.
+	// Real number as 4-byte ASCII (e.g., "3.1" or "03.1" for Edition 3.1).
+	// This is a FIXED 4-byte ASCII field, NOT 0x1F-terminated.
+	if offset+4 <= len(data) {
+		dsid.sted = strings.TrimRight(string(data[offset:offset+4]), "\x00 ")
+		offset += 4
+	}
 
 	// PRSP (1 byte) - Product specification code
 	// 1 = ENC (Electronic Navigational Chart)

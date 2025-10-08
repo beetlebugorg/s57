@@ -93,17 +93,14 @@ func TestParseDSID(t *testing.T) {
 	data = append(data, []byte("0")...)
 	data = append(data, 0x1F)
 
-	// UADT (variable) = "20250107"
+	// UADT (fixed A(8)) = "20250107"
 	data = append(data, []byte("20250107")...)
-	data = append(data, 0x1F)
 
-	// ISDT (variable) = "20240101"
+	// ISDT (fixed A(8)) = "20240101"
 	data = append(data, []byte("20240101")...)
-	data = append(data, 0x1F)
 
-	// STED (variable) = "03.1"
+	// STED (fixed R(4)) = "03.1"
 	data = append(data, []byte("03.1")...)
-	data = append(data, 0x1F)
 
 	// PRSP (1 byte) = 1 (ENC)
 	data = append(data, 1)
