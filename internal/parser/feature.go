@@ -166,8 +166,9 @@ type Feature struct {
 // Reference: S-57 Part 3 §7 (31Main.pdf p3.31): Structure implementation
 // showing how datasets are composed of metadata and feature records.
 type Chart struct {
-	metadata *datasetMetadata // Private - use accessor methods
-	Features []Feature        // Public - array of extracted features
+	metadata       *datasetMetadata            // Private - use accessor methods
+	Features       []Feature                   // Public - array of extracted features
+	spatialRecords map[spatialKey]*spatialRecord // Private - for update merging
 }
 
 // DatasetName returns the chart's dataset name (cell identifier).
