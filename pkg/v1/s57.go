@@ -424,6 +424,30 @@ func (g GeometryType) String() string {
 func convertChart(internal *parser.Chart) *Chart {
 	features := make([]Feature, len(internal.Features))
 	for i, f := range internal.Features {
+		attributes := f.Attributes
+
+		// Special handling for SOUNDG (Sounding) features:
+		// Extract Z coordinates (depths) from geometry and add as DEPTHS attribute
+		// SOUNDG features are multipoint with Z values containing depth soundings
+		if f.ObjectClass == "SOUNDG" && len(f.Geometry.Coordinates) > 0 {
+			depths := make([]float64, 0, len(f.Geometry.Coordinates))
+			for _, coord := range f.Geometry.Coordinates {
+				// Coordinates are [lon, lat, depth] for 3D points
+				if len(coord) >= 3 {
+					depths = append(depths, coord[2])
+				}
+			}
+			if len(depths) > 0 {
+				// Make a copy of attributes map and add DEPTHS
+				attrs := make(map[string]interface{}, len(attributes)+1)
+				for k, v := range attributes {
+					attrs[k] = v
+				}
+				attrs["DEPTHS"] = depths
+				attributes = attrs
+			}
+		}
+
 		features[i] = Feature{
 			id:          f.ID,
 			objectClass: f.ObjectClass,
@@ -431,7 +455,7 @@ func convertChart(internal *parser.Chart) *Chart {
 				Type:        GeometryType(f.Geometry.Type),
 				Coordinates: f.Geometry.Coordinates,
 			},
-			attributes: f.Attributes,
+			attributes: attributes,
 		}
 	}
 
