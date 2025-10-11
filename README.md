@@ -8,6 +8,17 @@ A pure Go parser for IHO S-57 Electronic Navigational Chart (ENC) files, the int
 
 S-57 is the data transfer standard developed by the International Hydrographic Organization (IHO) for digital hydrographic data. This parser provides complete support for reading S-57 ENC datasets with a focus on correctness, performance, and ease of use.
 
+## Development Approach
+
+This library was developed using an **AI-first, specification-driven** methodology. Every feature is implemented by first reading and analyzing the official IHO S-57 and ISO 8211 specifications, then generating clean, idiomatic Go code that precisely follows the standards.
+
+**Key characteristics:**
+- 🤖 **AI-generated code** - Written with human oversight
+- 📋 **Specification-first** - Every implementation decision traceable to IHO S-57 spec sections
+- ✅ **Production quality** - Clean, well-tested, idiomatic Go following best practices
+
+While this code was written by AI, it is designed to be **completely usable by human developers**. The primary goal is to demonstrate that AI can produce high-quality, maintainable code for complex, safety-critical standards when following rigorous specification-driven development practices.
+
 ## Features
 
 - ✅ Full IHO S-57 Edition 3.1 compliance
