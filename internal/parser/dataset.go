@@ -15,6 +15,7 @@ type datasetParams struct {
 	VDAT int   // Vertical datum
 	SDAT int   // Sounding datum
 	CSCL int32 // Compilation scale
+	COUN int   // Coordinate units: 1=lat/lon, 2=projected
 }
 
 // defaultDatasetParams returns default parameters when DSPM is not found
@@ -94,8 +95,12 @@ func parseDSPM(data []byte) datasetParams {
 	params.CSCL = int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 	offset += 4
 
-	// Skip DUNI, HUNI, PUNI, COUN (4 bytes total)
-	offset += 4
+	// Skip DUNI, HUNI, PUNI (3 bytes total)
+	offset += 3
+
+	// COUN (1 byte) - Coordinate units
+	params.COUN = int(data[offset])
+	offset++
 
 	// COMF (4 bytes) - int32 signed
 	if offset+4 <= len(data) {

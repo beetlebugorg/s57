@@ -469,27 +469,57 @@ func (c *Chart) buildSpatialIndex() {
 		bounds:   make([]Bounds, len(c.features)),
 	}
 
-	// Calculate bounds for each feature and chart overall
+	// Calculate bounds - prefer M_COVR (Meta Coverage) feature if available
+	// M_COVR defines the official coverage area of the chart
 	var chartBounds *Bounds
+
+	// First pass: look for M_COVR features
+	for _, feature := range c.features {
+		if feature.ObjectClass() == "M_COVR" {
+			fb := featureBounds(feature)
+			if chartBounds == nil {
+				chartBounds = &fb
+			} else {
+				// Expand with M_COVR bounds
+				if fb.MinLon < chartBounds.MinLon {
+					chartBounds.MinLon = fb.MinLon
+				}
+				if fb.MaxLon > chartBounds.MaxLon {
+					chartBounds.MaxLon = fb.MaxLon
+				}
+				if fb.MinLat < chartBounds.MinLat {
+					chartBounds.MinLat = fb.MinLat
+				}
+				if fb.MaxLat > chartBounds.MaxLat {
+					chartBounds.MaxLat = fb.MaxLat
+				}
+			}
+		}
+	}
+
+	// Second pass: calculate spatial index and fallback bounds if no M_COVR
 	for i, feature := range c.features {
 		fb := featureBounds(feature)
 		c.spatialIndex.bounds[i] = fb
 
-		// Expand chart bounds
+		// Only use feature bounds if we didn't find M_COVR
 		if chartBounds == nil {
-			chartBounds = &fb
-		} else {
-			if fb.MinLon < chartBounds.MinLon {
-				chartBounds.MinLon = fb.MinLon
-			}
-			if fb.MaxLon > chartBounds.MaxLon {
-				chartBounds.MaxLon = fb.MaxLon
-			}
-			if fb.MinLat < chartBounds.MinLat {
-				chartBounds.MinLat = fb.MinLat
-			}
-			if fb.MaxLat > chartBounds.MaxLat {
-				chartBounds.MaxLat = fb.MaxLat
+			// Expand chart bounds
+			if chartBounds == nil {
+				chartBounds = &fb
+			} else {
+				if fb.MinLon < chartBounds.MinLon {
+					chartBounds.MinLon = fb.MinLon
+				}
+				if fb.MaxLon > chartBounds.MaxLon {
+					chartBounds.MaxLon = fb.MaxLon
+				}
+				if fb.MinLat < chartBounds.MinLat {
+					chartBounds.MinLat = fb.MinLat
+				}
+				if fb.MaxLat > chartBounds.MaxLat {
+					chartBounds.MaxLat = fb.MaxLat
+				}
 			}
 		}
 	}
