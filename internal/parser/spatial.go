@@ -103,18 +103,17 @@ func parseSpatialRecordInternal(record *iso8211.DataRecord, comf int32, somf int
 func parseCoordinates2D(data []byte, comf int32) [][2]float64 {
 	coords := make([][2]float64, 0)
 
-	// SG2D structure per S-57 §7.7.1.6: repeated [YCOO(4 bytes), XCOO(4 bytes)]
+	// SG2D structure per S-57 §7.7.1.6: SHOULD BE [YCOO(4 bytes), XCOO(4 bytes)]
 	// Each coordinate pair is 8 bytes (2 * int32 signed)
-	// Note: Y comes before X in S-57! Y=latitude, X=longitude
+	// NOTE: Despite spec saying [Y,X], actual files appear to store [X,Y] (lon,lat)
 	offset := 0
 	for offset+8 <= len(data) {
-		// Parse Y coordinate (latitude) - 4 bytes signed int32
-		// b24 format = signed 32-bit integer little-endian
-		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse first 4 bytes - appears to be X (longitude) despite spec
+		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
-		// Parse X coordinate (longitude) - 4 bytes signed int32
-		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse second 4 bytes - appears to be Y (latitude) despite spec
+		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
 		// Convert to float64 and scale by COMF
@@ -123,6 +122,7 @@ func parseCoordinates2D(data []byte, comf int32) [][2]float64 {
 		lon := convertCoordinate(x, comf)
 		lat := convertCoordinate(y, comf)
 
+		// Store in GeoJSON order: [longitude, latitude]
 		coords = append(coords, [2]float64{lon, lat})
 	}
 
@@ -134,17 +134,18 @@ func parseCoordinates2D(data []byte, comf int32) [][2]float64 {
 func parseCoordinates3D(data []byte, comf int32, somf int32) [][2]float64 {
 	coords := make([][2]float64, 0)
 
-	// SG3D structure per S-57 §7.7.1.7: repeated [YCOO(4 bytes), XCOO(4 bytes), VE3D(4 bytes)]
+	// SG3D structure per S-57 §7.7.1.7: SHOULD BE [YCOO(4 bytes), XCOO(4 bytes), VE3D(4 bytes)]
 	// Each coordinate triple is 12 bytes (3 * int32 signed)
 	// YCOO/XCOO scaled by COMF, VE3D scaled by SOMF
+	// NOTE: Despite spec saying [Y,X,Z], actual files appear to store [X,Y,Z] (lon,lat,depth)
 	offset := 0
 	for offset+12 <= len(data) {
-		// Parse Y coordinate (latitude) - 4 bytes signed int32
-		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse first 4 bytes - appears to be X (longitude) despite spec
+		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
-		// Parse X coordinate (longitude) - 4 bytes signed int32
-		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse second 4 bytes - appears to be Y (latitude) despite spec
+		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
 		// Parse VE3D (depth/sounding) - 4 bytes signed int32
@@ -156,6 +157,7 @@ func parseCoordinates3D(data []byte, comf int32, somf int32) [][2]float64 {
 		lon := convertCoordinate(x, comf)
 		lat := convertCoordinate(y, comf)
 
+		// Store in GeoJSON order: [longitude, latitude]
 		coords = append(coords, [2]float64{lon, lat})
 	}
 
