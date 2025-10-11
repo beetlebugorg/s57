@@ -63,7 +63,11 @@ func (r *polygonBuilder) getFullEdgeCoordinates(edge *edge, orientation int) [][
 	// Add start node
 	if edge.StartNodeID != 0 {
 		if node := r.getNode(edge.StartNodeID); node != nil && len(node.Coordinates) > 0 {
-			coords = append(coords, node.Coordinates[0])
+			// Extract 2D coordinate (first 2 values) from variable-length coordinate
+			coord := node.Coordinates[0]
+			if len(coord) >= 2 {
+				coords = append(coords, [2]float64{coord[0], coord[1]})
+			}
 		}
 	}
 
@@ -73,7 +77,11 @@ func (r *polygonBuilder) getFullEdgeCoordinates(edge *edge, orientation int) [][
 	// Add end node
 	if edge.EndNodeID != 0 {
 		if node := r.getNode(edge.EndNodeID); node != nil && len(node.Coordinates) > 0 {
-			coords = append(coords, node.Coordinates[0])
+			// Extract 2D coordinate (first 2 values) from variable-length coordinate
+			coord := node.Coordinates[0]
+			if len(coord) >= 2 {
+				coords = append(coords, [2]float64{coord[0], coord[1]})
+			}
 		}
 	}
 
@@ -140,8 +148,13 @@ func (r *polygonBuilder) loadEdge(edgeID int64) (*edge, error) {
 	// Nodes are stored separately and referenced via VRPT
 
 	// Edge.Points = SG2D coordinates only (may be empty for straight-line edges)
-	points := make([][2]float64, len(spatial.Coordinates))
-	copy(points, spatial.Coordinates)
+	// Convert variable-length coordinates to fixed 2D coordinates
+	points := make([][2]float64, 0, len(spatial.Coordinates))
+	for _, coord := range spatial.Coordinates {
+		if len(coord) >= 2 {
+			points = append(points, [2]float64{coord[0], coord[1]})
+		}
+	}
 
 	// Create edge
 	newEdge := &edge{

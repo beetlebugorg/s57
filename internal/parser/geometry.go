@@ -103,45 +103,55 @@ func constructLineStringGeometry(featureRec *featureRecord, spatialRecords map[s
 	}, nil
 }
 
-// constructPointGeometry builds point geometry from first spatial reference
-// S-57 §7.6: Point features reference a single isolated node (RCNM=110)
+// constructPointGeometry builds point geometry from spatial references
+// S-57 §7.6: Point features can reference:
+//   - Single isolated node (RCNM=110) for simple point features
+//   - Multiple isolated nodes for multipoint features (e.g., SOUNDG with many soundings)
 func constructPointGeometry(featureRec *featureRecord, spatialRecords map[spatialKey]*spatialRecord) (Geometry, error) {
-	// Use only first spatial ref for points
-	spatialRef := featureRec.SpatialRefs[0]
+	// Collect coordinates from ALL spatial references
+	// For multipoint features like SOUNDG, there can be hundreds of refs
+	allCoords := make([][]float64, 0)
 
-	// Try to find the spatial record - check connected node first, then isolated node
-	// Point features can reference either RCNM=110 (isolated) or RCNM=120 (connected)
-	var spatial *spatialRecord
-	for _, rcnm := range []int{int(spatialTypeConnectedNode), int(spatialTypeIsolatedNode)} {
-		key := spatialKey{RCNM: rcnm, RCID: spatialRef.RCID}
-		if sp, ok := spatialRecords[key]; ok {
-			spatial = sp
-			break
+	for _, spatialRef := range featureRec.SpatialRefs {
+		// Try to find the spatial record - check isolated node first, then connected node
+		// Point features can reference either RCNM=110 (isolated) or RCNM=120 (connected)
+		// NOTE: Check isolated node FIRST - for multipoint features like SOUNDG,
+		// the SG3D coordinates are stored in the isolated node, not the connected node
+		var spatial *spatialRecord
+		for _, rcnm := range []int{int(spatialTypeIsolatedNode), int(spatialTypeConnectedNode)} {
+			key := spatialKey{RCNM: rcnm, RCID: spatialRef.RCID}
+			if sp, ok := spatialRecords[key]; ok {
+				spatial = sp
+				break
+			}
+		}
+
+		if spatial == nil {
+			// Skip missing spatial records (don't fail entire feature)
+			continue
+		}
+
+		// Get coordinates from this spatial record
+		if len(spatial.Coordinates) > 0 {
+			// Extract ALL coordinates from spatial record
+			// Preserve all dimensions (2D or 3D) - don't strip Z coordinates
+			for _, coord := range spatial.Coordinates {
+				allCoords = append(allCoords, coord) // Keep full coordinate (with Z if present)
+			}
 		}
 	}
 
-	if spatial == nil {
+	if len(allCoords) == 0 {
 		return Geometry{}, &ErrMissingSpatialRecord{
 			FeatureID: featureRec.ID,
-			SpatialID: spatialRef.RCID,
+			SpatialID: featureRec.SpatialRefs[0].RCID,
 		}
 	}
 
-	// Get coordinates
-	if len(spatial.Coordinates) > 0 {
-		// Use first coordinate from spatial record
-		coord := spatial.Coordinates[0]
-		return Geometry{
-			Type:        GeometryTypePoint,
-			Coordinates: [][]float64{{coord[0], coord[1]}},
-		}, nil
-	}
-
-	// If no direct coordinates, this is an error for point features
-	return Geometry{}, &ErrMissingSpatialRecord{
-		FeatureID: featureRec.ID,
-		SpatialID: spatialRef.RCID,
-	}
+	return Geometry{
+		Type:        GeometryTypePoint,
+		Coordinates: allCoords,
+	}, nil
 }
 
 // constructPolygonGeometry builds polygon geometry using VRPT topology resolution

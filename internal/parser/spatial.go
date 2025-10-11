@@ -22,7 +22,7 @@ type vectorPointer struct {
 type spatialRecord struct {
 	ID             int64           // Spatial record ID from VRID
 	RecordType     spatialType     // Node, Edge, etc.
-	Coordinates    [][2]float64    // Coordinate pairs [lon, lat]
+	Coordinates    [][]float64     // Variable-length coordinates [lon, lat] or [lon, lat, depth]
 	VectorPointers []vectorPointer // VRPT pointers to other spatial records
 	RecordVersion  int             // RVER - record version number
 	UpdateInstr    int             // RUIN - update instruction
@@ -64,7 +64,7 @@ func parseSpatialRecordInternal(record *iso8211.DataRecord, comf int32, somf int
 	rcnm := vridData[0]
 	spatialRec := &spatialRecord{
 		RecordType:     spatialType(rcnm),
-		Coordinates:    make([][2]float64, 0),
+		Coordinates:    make([][]float64, 0),
 		VectorPointers: make([]vectorPointer, 0),
 	}
 
@@ -83,7 +83,7 @@ func parseSpatialRecordInternal(record *iso8211.DataRecord, comf int32, somf int
 		spatialRec.Coordinates = parseCoordinates2D(sg2dData, comf)
 	}
 
-	// Parse SG3D (3D Coordinate) field if present - use only X,Y
+	// Parse SG3D (3D Coordinate) field if present - includes depth (Z)
 	// X/Y scaled by COMF, Z/depth scaled by SOMF
 	if sg3dData, ok := record.Fields["SG3D"]; ok {
 		spatialRec.Coordinates = parseCoordinates3D(sg3dData, comf, somf)
@@ -100,8 +100,8 @@ func parseSpatialRecordInternal(record *iso8211.DataRecord, comf int32, somf int
 // parseCoordinates2D extracts 2D coordinates from SG2D field
 // S-57 §7.7.1.6: SG2D contains repeated coordinate pairs
 // Coordinates are stored as signed integers (b24 = int32) that need scaling by COMF
-func parseCoordinates2D(data []byte, comf int32) [][2]float64 {
-	coords := make([][2]float64, 0)
+func parseCoordinates2D(data []byte, comf int32) [][]float64 {
+	coords := make([][]float64, 0)
 
 	// SG2D structure per S-57 §7.7.1.6: SHOULD BE [YCOO(4 bytes), XCOO(4 bytes)]
 	// Each coordinate pair is 8 bytes (2 * int32 signed)
@@ -123,16 +123,16 @@ func parseCoordinates2D(data []byte, comf int32) [][2]float64 {
 		lat := convertCoordinate(y, comf)
 
 		// Store in GeoJSON order: [longitude, latitude]
-		coords = append(coords, [2]float64{lon, lat})
+		coords = append(coords, []float64{lon, lat})
 	}
 
 	return coords
 }
 
-// parseCoordinates3D extracts coordinates from SG3D field (ignoring Z)
+// parseCoordinates3D extracts 3D coordinates from SG3D field including depth (Z)
 // S-57 §7.7.1.7: SG3D contains repeated 3D coordinate triples (soundings)
-func parseCoordinates3D(data []byte, comf int32, somf int32) [][2]float64 {
-	coords := make([][2]float64, 0)
+func parseCoordinates3D(data []byte, comf int32, somf int32) [][]float64 {
+	coords := make([][]float64, 0)
 
 	// SG3D structure per S-57 §7.7.1.7: SHOULD BE [YCOO(4 bytes), XCOO(4 bytes), VE3D(4 bytes)]
 	// Each coordinate triple is 12 bytes (3 * int32 signed)
@@ -149,16 +149,17 @@ func parseCoordinates3D(data []byte, comf int32, somf int32) [][2]float64 {
 		offset += 4
 
 		// Parse VE3D (depth/sounding) - 4 bytes signed int32
-		// Note: We skip this for 2D coordinate extraction, but it should be scaled by SOMF
-		_ = int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Scale by SOMF (Sounding Multiplication Factor)
+		z := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
-		// Convert to float64 and scale by COMF (not SOMF for X/Y)
+		// Convert to float64 and scale: X/Y by COMF, Z by SOMF
 		lon := convertCoordinate(x, comf)
 		lat := convertCoordinate(y, comf)
+		depth := convertCoordinate(z, somf)
 
-		// Store in GeoJSON order: [longitude, latitude]
-		coords = append(coords, [2]float64{lon, lat})
+		// Store in 3D format: [longitude, latitude, depth]
+		coords = append(coords, []float64{lon, lat, depth})
 	}
 
 	return coords

@@ -35,10 +35,12 @@ func ValidateGeometry(geometry *Geometry) error {
 	// Validate coordinate count based on geometry type
 	switch geometry.Type {
 	case GeometryTypePoint:
-		if len(geometry.Coordinates) != 1 {
+		// Point geometry can have 1 coordinate (simple point) or many (multipoint)
+		// Multipoint features like SOUNDG can have hundreds of coordinates
+		if len(geometry.Coordinates) < 1 {
 			return &ErrInvalidGeometry{
 				Type:   geometry.Type,
-				Reason: fmt.Sprintf("point must have exactly 1 coordinate, got %d", len(geometry.Coordinates)),
+				Reason: fmt.Sprintf("point must have at least 1 coordinate, got %d", len(geometry.Coordinates)),
 			}
 		}
 
@@ -79,12 +81,13 @@ func ValidateGeometry(geometry *Geometry) error {
 		}
 	}
 
-	// Validate each coordinate pair
+	// Validate each coordinate (2D or 3D)
+	// S-57 soundings (SOUNDG) use 3D coordinates [lon, lat, depth]
 	for i, coord := range geometry.Coordinates {
-		if len(coord) != 2 {
+		if len(coord) < 2 || len(coord) > 3 {
 			return &ErrInvalidGeometry{
 				Type:   geometry.Type,
-				Reason: fmt.Sprintf("coordinate %d must have exactly 2 values [lon, lat], got %d", i, len(coord)),
+				Reason: fmt.Sprintf("coordinate %d must have 2 or 3 values [lon, lat] or [lon, lat, depth], got %d", i, len(coord)),
 			}
 		}
 		lon, lat := coord[0], coord[1]
@@ -94,6 +97,7 @@ func ValidateGeometry(geometry *Geometry) error {
 				Reason: fmt.Sprintf("coordinate %d invalid: %v", i, err),
 			}
 		}
+		// Note: depth (Z) coordinate is not validated - can be any value including negative
 	}
 
 	return nil
