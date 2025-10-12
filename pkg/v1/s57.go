@@ -190,6 +190,44 @@ type Chart struct {
 	productSpec       string
 	applicationProfile string
 	usageBand          UsageBand
+
+	// Coordinate system metadata (S-57 §7.3.2)
+	coordinateUnits CoordinateUnits // COUN field from DSPM record
+	horizontalDatum int             // HDAT field from DSPM record
+	compilationScale int32          // CSCL field from DSPM record
+}
+
+// CoordinateUnits indicates how coordinates are encoded in the chart.
+//
+// S-57 §7.3.2.1: COUN field in DSPM record defines coordinate units.
+// Reference: S-57 Part 3 Table 3.2
+type CoordinateUnits int
+
+const (
+	// CoordinateUnitsLatLon indicates coordinates are in latitude/longitude (WGS-84).
+	// This is the most common format for ENC charts.
+	// Coordinates are decimal degrees, typically scaled by 10^7.
+	CoordinateUnitsLatLon CoordinateUnits = 1
+
+	// CoordinateUnitsEastNorth indicates coordinates are in projected Easting/Northing.
+	// Less common; requires DSPR record to specify projection parameters.
+	CoordinateUnitsEastNorth CoordinateUnits = 2
+
+	// CoordinateUnitsUnknown indicates coordinate units are not specified.
+	// Treat as lat/lon by default (S-57 default assumption).
+	CoordinateUnitsUnknown CoordinateUnits = 0
+)
+
+// String returns a human-readable name for the coordinate units.
+func (c CoordinateUnits) String() string {
+	switch c {
+	case CoordinateUnitsLatLon:
+		return "Latitude/Longitude (WGS-84)"
+	case CoordinateUnitsEastNorth:
+		return "Easting/Northing (Projected)"
+	default:
+		return "Unknown"
+	}
 }
 
 // UsageBand defines the ENC usage band (navigational purpose) of the chart.
@@ -411,6 +449,32 @@ func (c *Chart) ApplicationProfile() string { return c.applicationProfile }
 // Applications should load the appropriate band based on zoom level.
 func (c *Chart) UsageBand() UsageBand { return c.usageBand }
 
+// CoordinateUnits returns the coordinate system used in the chart.
+//
+// Most ENC charts use CoordinateUnitsLatLon (lat/lon in WGS-84).
+// Some charts may use CoordinateUnitsEastNorth for projected coordinates.
+//
+// S-57 §7.3.2.1: COUN field in DSPM record.
+func (c *Chart) CoordinateUnits() CoordinateUnits { return c.coordinateUnits }
+
+// HorizontalDatum returns the horizontal geodetic datum code.
+//
+// Common values:
+//   - 2: WGS-84 (most common for modern ENCs)
+//   - Other values defined in S-57 Part 3 Table 3.1
+//
+// S-57 §7.3.2.1: HDAT field in DSPM record.
+func (c *Chart) HorizontalDatum() int { return c.horizontalDatum }
+
+// CompilationScale returns the compilation scale denominator of the chart.
+//
+// For example, a value of 50000 indicates the chart was compiled at 1:50,000 scale.
+// This helps determine appropriate display scales and SCAMIN filtering.
+//
+// S-57 §7.3.2.1: CSCL field in DSPM record.
+// Returns 0 if not specified.
+func (c *Chart) CompilationScale() int32 { return c.compilationScale }
+
 // Feature represents a navigational object from an S-57 chart.
 //
 // Features include depth contours, buoys, lights, hazards, restricted areas,
@@ -578,6 +642,10 @@ func convertChart(internal *parser.Chart) *Chart {
 		productSpec:       internal.ProductSpecification(),
 		applicationProfile: internal.ApplicationProfile(),
 		usageBand:         UsageBand(internal.IntendedUsage()),
+		// Coordinate system metadata from DSPM record
+		coordinateUnits:  CoordinateUnits(internal.CoordinateUnits()),
+		horizontalDatum:  internal.HorizontalDatum(),
+		compilationScale: internal.CompilationScale(),
 	}
 
 	// Build spatial index for fast viewport queries

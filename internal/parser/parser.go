@@ -216,6 +216,7 @@ func buildChart(data *chartData, metadata *datasetMetadata, params datasetParams
 
 	return &Chart{
 		metadata:       metadata,
+		params:         params,
 		Features:       finalFeatures,
 		spatialRecords: data.spatialRecords, // Keep for potential future updates
 	}, nil

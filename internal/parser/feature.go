@@ -166,6 +166,7 @@ type Feature struct {
 // showing how datasets are composed of metadata and feature records.
 type Chart struct {
 	metadata       *datasetMetadata            // Private - use accessor methods
+	params         datasetParams               // Private - DSPM record data
 	Features       []Feature                   // Public - array of extracted features
 	spatialRecords map[spatialKey]*spatialRecord // Private - for update merging
 }
@@ -267,6 +268,24 @@ func (c *Chart) IntendedUsage() int {
 		return 0
 	}
 	return c.metadata.intu
+}
+
+// CoordinateUnits returns the coordinate units from the DSPM record.
+// S-57 §7.3.2.1 COUN field: 1=lat/lon, 2=eastings/northings.
+func (c *Chart) CoordinateUnits() int {
+	return c.params.COUN
+}
+
+// HorizontalDatum returns the horizontal datum code from the DSPM record.
+// S-57 §7.3.2.1 HDAT field: 2=WGS-84 (most common).
+func (c *Chart) HorizontalDatum() int {
+	return c.params.HDAT
+}
+
+// CompilationScale returns the compilation scale from the DSPM record.
+// S-57 §7.3.2.1 CSCL field: scale denominator (e.g., 50000 for 1:50,000).
+func (c *Chart) CompilationScale() int32 {
+	return c.params.CSCL
 }
 
 // spatialRef represents a feature-to-spatial pointer with orientation
