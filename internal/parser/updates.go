@@ -269,10 +269,38 @@ func applySpatialUpdate(chart *chartData, record *iso8211.DataRecord, vridData [
 
 	case UpdateModify:
 		// Update existing spatial record
-		if _, exists := chart.spatialRecords[key]; !exists {
+		existing, exists := chart.spatialRecords[key]
+		if !exists {
 			return fmt.Errorf("MODIFY: spatial record %v not found", key)
 		}
-		chart.spatialRecords[key] = spatialRec
+
+		// Per S-57 §8.4.3.2: MODIFY only updates fields present in the update record
+		// We must selectively merge fields rather than wholesale replacement
+		// This is critical - update records may omit fields that should be preserved!
+
+		// Always update core identification fields
+		existing.RecordVersion = spatialRec.RecordVersion
+		existing.UpdateInstr = spatialRec.UpdateInstr
+
+		// Update coordinates ONLY if SG2D or SG3D field present in update record
+		_, hasSG2D := record.Fields["SG2D"]
+		_, hasSG3D := record.Fields["SG3D"]
+		if hasSG2D || hasSG3D {
+			// Update present - replace coordinates
+			existing.Coordinates = spatialRec.Coordinates
+		}
+		// If neither SG2D nor SG3D present, preserve existing coordinates
+
+		// Update VRPT ONLY if VRPT field present in update record
+		_, hasVRPT := record.Fields["VRPT"]
+		if hasVRPT {
+			// VRPT update present - replace vector pointers
+			existing.VectorPointers = spatialRec.VectorPointers
+		}
+		// If VRPT not present, preserve existing vector pointers
+
+		// Keep existing record in map (already there, but make it explicit)
+		chart.spatialRecords[key] = existing
 
 	default:
 		return fmt.Errorf("unknown RUIN value for spatial: %d", ruin)
