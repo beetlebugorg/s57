@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/beetlebugorg/iso8211/pkg/v1"
 )
@@ -392,9 +391,8 @@ func parseAttributes(data []byte) map[string]interface{} {
 		}
 
 		if valueEnd > offset {
-			// Store attribute as string for now
-			// Real implementation should parse based on attribute type
-			attrName := fmt.Sprintf("ATTR_%d", attrCode)
+			// Convert attribute code to name using attribute catalogue
+			attrName := AttributeCodeToString(int(attrCode))
 			attributes[attrName] = string(data[offset:valueEnd])
 		}
 

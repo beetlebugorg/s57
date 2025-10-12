@@ -278,6 +278,10 @@ Typical performance:
 - Medium charts (1-10MB): 100ms - 1s
 - Large charts (10-50MB): 1-5s
 
+## Acknowledgments
+
+This parser uses the S-57 attribute catalogue CSV file from the [GDAL project](https://gdal.org/), licensed under MIT/X11. The attribute code to name mappings are embedded in the parser for automatic attribute name resolution.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.

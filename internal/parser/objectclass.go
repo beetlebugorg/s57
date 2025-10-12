@@ -1,6 +1,13 @@
 package parser
 
-import "fmt"
+import (
+	_ "embed"
+	"encoding/csv"
+	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+)
 
 // S-57 Object Class lookup table
 // Source: IHO S-57 Edition 3.1 Appendix A - Object Catalogue (verified against 31ApAch1.pdf)
@@ -180,6 +187,60 @@ var objectClassNames = map[int]string{
 	400: "C_AGGR",
 	401: "C_ASSO",
 	402: "C_STAC",
+}
+
+//go:embed s57attributes.csv
+// S-57 attribute catalogue CSV from GDAL project
+// Source: https://gdal.org/ - licensed under MIT/X11
+// This file maps S-57 attribute codes to their standard acronyms per IHO S-57 Appendix A Chapter 2
+var s57AttributesCSV string
+
+var (
+	attributeNames     map[int]string
+	attributeNamesOnce sync.Once
+)
+
+// loadAttributeNames loads the S-57 attribute catalogue from embedded CSV
+func loadAttributeNames() {
+	attributeNames = make(map[int]string)
+
+	reader := csv.NewReader(strings.NewReader(s57AttributesCSV))
+	records, err := reader.ReadAll()
+	if err != nil {
+		// Fall back to empty map on error
+		return
+	}
+
+	// Skip header row
+	for _, record := range records[1:] {
+		if len(record) < 3 {
+			continue
+		}
+
+		// Parse: Code, Attribute, Acronym, ...
+		code, err := strconv.Atoi(strings.Trim(record[0], "\""))
+		if err != nil {
+			continue
+		}
+
+		acronym := strings.Trim(record[2], "\"")
+		if acronym != "" {
+			attributeNames[code] = acronym
+		}
+	}
+}
+
+// AttributeCodeToString converts S-57 numeric attribute code to string acronym
+// S-57 Appendix A Chapter 2: Attribute Catalogue
+func AttributeCodeToString(code int) string {
+	// Lazy load attribute names from CSV
+	attributeNamesOnce.Do(loadAttributeNames)
+
+	if name, ok := attributeNames[code]; ok {
+		return name
+	}
+	// Unknown attribute - return generic code
+	return fmt.Sprintf("ATTR_%d", code)
 }
 
 // ObjectClassToString converts S-57 numeric object class to string code
