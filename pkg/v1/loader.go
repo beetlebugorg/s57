@@ -294,7 +294,79 @@ func (l *ChartLoader) GetChartsForViewport(viewport Bounds, zoom int) ([]*Chart,
 		charts = append(charts, chart)
 	}
 
+	// For high zoom levels (harbor/berthing detail), optimize chart selection
+	// to avoid rendering thousands of features from overlapping lower-detail charts.
+	// Strategy: Keep the most detailed chart PLUS one chart from bands 3-4 (coastal/approach)
+	// for base features (land, water, coastline).
+	if zoom >= 12 && len(charts) > 1 {
+		charts = selectOptimalCharts(charts)
+	}
+
 	return charts, nil
+}
+
+// selectOptimalCharts returns the optimal set of charts for high-zoom rendering.
+// Returns the most detailed chart plus one chart from bands 3-4 for base features.
+func selectOptimalCharts(charts []*Chart) []*Chart {
+	if len(charts) == 0 {
+		return nil
+	}
+	if len(charts) == 1 {
+		return charts
+	}
+
+	// Group charts by usage band
+	var band3_4 []*Chart // Coastal/Approach (base features)
+	var band5_6 []*Chart // Harbour/Berthing (detail features)
+
+	for _, chart := range charts {
+		scale := chart.CompilationScale()
+		band := scaleToUsageBand(int(scale))
+
+		if band == 3 || band == 4 {
+			band3_4 = append(band3_4, chart)
+		} else if band == 5 || band == 6 {
+			band5_6 = append(band5_6, chart)
+		}
+	}
+
+	result := []*Chart{}
+
+	// Always include the most detailed harbor/berthing chart if available
+	if len(band5_6) > 0 {
+		best := band5_6[0]
+		for _, chart := range band5_6[1:] {
+			if chart.CompilationScale() < best.CompilationScale() {
+				best = chart
+			}
+		}
+		result = append(result, best)
+	}
+
+	// Also include one coastal/approach chart for base features (land, water)
+	if len(band3_4) > 0 {
+		// Prefer the less detailed chart from band 3-4 (more base coverage)
+		base := band3_4[0]
+		for _, chart := range band3_4[1:] {
+			if chart.CompilationScale() > base.CompilationScale() {
+				base = chart
+			}
+		}
+		result = append(result, base)
+	}
+
+	// If we didn't find band 5-6 charts, return the most detailed available
+	if len(result) == 0 {
+		best := charts[0]
+		for _, chart := range charts[1:] {
+			if chart.CompilationScale() < best.CompilationScale() {
+				best = chart
+			}
+		}
+		result = append(result, best)
+	}
+
+	return result
 }
 
 // loadChart loads a chart by name, using cache if available.
