@@ -5,14 +5,18 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/dhconnelly/rtreego"
 )
 
 // ChartIndex provides fast spatial queries over a collection of charts.
 //
 // The index stores lightweight metadata for each chart (bounds, scale, edition)
-// and supports efficient spatial filtering. This allows loading only charts
-// that intersect a region of interest, dramatically reducing load time for
-// regional rendering.
+// and supports efficient spatial filtering using an R-tree spatial index.
+// This allows loading only charts that intersect a region of interest,
+// dramatically reducing load time for regional rendering.
+//
+// Spatial queries are O(log N) with the R-tree, compared to O(N) with linear scan.
 //
 // Example:
 //
@@ -32,17 +36,34 @@ import (
 //	fmt.Printf("Found %d charts covering Florida\n", len(charts))
 type ChartIndex struct {
 	charts []ChartEntry
+	rtree  *rtreego.Rtree // Spatial index for fast queries
 }
 
 // ChartEntry contains indexed metadata for a single chart.
 type ChartEntry struct {
 	Path             string    // Absolute path to .000 file
 	Name             string    // Dataset name
-	Bounds           Bounds    // Geographic coverage
+	GeoBounds        Bounds    // Geographic coverage
 	CompilationScale int       // Scale denominator (e.g., 50000 for 1:50000)
 	Edition          int       // Edition number
 	UpdateNumber     int       // Update number
 	UsageBand        UsageBand // Intended usage band
+}
+
+// Bounds method for rtreego.Spatial interface.
+// Converts geographic bounds to R-tree rectangle.
+func (e ChartEntry) Bounds() rtreego.Rect {
+	// Create point at southwest corner
+	point := rtreego.Point{e.GeoBounds.MinLon, e.GeoBounds.MinLat}
+
+	// Create lengths (width, height)
+	lengths := []float64{
+		e.GeoBounds.MaxLon - e.GeoBounds.MinLon,
+		e.GeoBounds.MaxLat - e.GeoBounds.MinLat,
+	}
+
+	rect, _ := rtreego.NewRect(point, lengths)
+	return rect
 }
 
 // QueryOptions controls spatial query behavior.
@@ -122,26 +143,38 @@ func BuildIndexFromDir(root string, parser Parser, opts LoadOptions) (*ChartInde
 // BuildIndex creates an index from a loaded CellSet.
 //
 // This is useful when you've already loaded charts and want to create
-// an index for spatial queries.
+// an index for spatial queries. The function builds both a linear array
+// and an R-tree spatial index for efficient queries.
 func BuildIndex(cellSet *CellSet) *ChartIndex {
 	entries := make([]ChartEntry, len(cellSet.Cells))
+
+	// Create R-tree (2D, min=25 children, max=50 children)
+	rtree := rtreego.NewTree(2, 25, 50)
 
 	for i, cell := range cellSet.Cells {
 		entries[i] = ChartEntry{
 			Path:             "", // Path not available from Cell (TODO: add to Cell struct)
 			Name:             cell.Chart.DatasetName(),
-			Bounds:           cell.Chart.Bounds(),
+			GeoBounds:        cell.Chart.Bounds(),
 			CompilationScale: cell.CompilationScale,
 			Edition:          cell.Edition(),
 			UpdateNumber:     cell.UpdateNumber(),
 			UsageBand:        cell.Chart.UsageBand(),
 		}
+
+		// Insert into R-tree for spatial indexing
+		rtree.Insert(entries[i])
 	}
 
-	return &ChartIndex{charts: entries}
+	return &ChartIndex{
+		charts: entries,
+		rtree:  rtree,
+	}
 }
 
 // Query returns charts intersecting the given bounds, sorted by priority.
+//
+// Uses R-tree spatial index for efficient O(log N) queries instead of O(N) linear scan.
 //
 // Priority ordering (per S-52 Section 10.3.5):
 //  1. Scale: Larger scale (smaller denominator) has priority
@@ -167,35 +200,79 @@ func BuildIndex(cellSet *CellSet) *ChartIndex {
 func (idx *ChartIndex) Query(bounds Bounds, opts QueryOptions) []ChartEntry {
 	var result []ChartEntry
 
-	for _, entry := range idx.charts {
-		// Check spatial intersection
-		if !bounds.Intersects(entry.Bounds) {
-			continue
+	// Use R-tree for spatial query if available
+	if idx.rtree != nil {
+		// Convert bounds to rtreego.Rect
+		point := rtreego.Point{bounds.MinLon, bounds.MinLat}
+		lengths := []float64{
+			bounds.MaxLon - bounds.MinLon,
+			bounds.MaxLat - bounds.MinLat,
 		}
+		queryRect, _ := rtreego.NewRect(point, lengths)
 
-		// Apply scale filters
-		if opts.MinScale > 0 && entry.CompilationScale > opts.MinScale {
-			continue // Chart scale too small (denominator too large)
-		}
-		if opts.MaxScale > 0 && entry.CompilationScale < opts.MaxScale {
-			continue // Chart scale too large (denominator too small)
-		}
+		// Query R-tree for intersecting charts
+		spatials := idx.rtree.SearchIntersect(queryRect)
 
-		// Apply usage band filter
-		if len(opts.UsageBands) > 0 {
-			match := false
-			for _, band := range opts.UsageBands {
-				if entry.UsageBand == band {
-					match = true
-					break
+		// Extract ChartEntry from Spatial interface
+		for _, spatial := range spatials {
+			entry := spatial.(ChartEntry)
+
+			// Apply scale filters
+			if opts.MinScale > 0 && entry.CompilationScale > opts.MinScale {
+				continue // Chart scale too small (denominator too large)
+			}
+			if opts.MaxScale > 0 && entry.CompilationScale < opts.MaxScale {
+				continue // Chart scale too large (denominator too small)
+			}
+
+			// Apply usage band filter
+			if len(opts.UsageBands) > 0 {
+				match := false
+				for _, band := range opts.UsageBands {
+					if entry.UsageBand == band {
+						match = true
+						break
+					}
+				}
+				if !match {
+					continue
 				}
 			}
-			if !match {
+
+			result = append(result, entry)
+		}
+	} else {
+		// Fallback to linear scan if no R-tree (shouldn't happen)
+		for _, entry := range idx.charts {
+			// Check spatial intersection
+			if !bounds.Intersects(entry.GeoBounds) {
 				continue
 			}
-		}
 
-		result = append(result, entry)
+			// Apply scale filters
+			if opts.MinScale > 0 && entry.CompilationScale > opts.MinScale {
+				continue // Chart scale too small (denominator too large)
+			}
+			if opts.MaxScale > 0 && entry.CompilationScale < opts.MaxScale {
+				continue // Chart scale too large (denominator too small)
+			}
+
+			// Apply usage band filter
+			if len(opts.UsageBands) > 0 {
+				match := false
+				for _, band := range opts.UsageBands {
+					if entry.UsageBand == band {
+						match = true
+						break
+					}
+				}
+				if !match {
+					continue
+				}
+			}
+
+			result = append(result, entry)
+		}
 	}
 
 	// Sort by priority
@@ -228,9 +305,9 @@ func (idx *ChartIndex) Bounds() Bounds {
 		return Bounds{}
 	}
 
-	bounds := idx.charts[0].Bounds
+	bounds := idx.charts[0].GeoBounds
 	for i := 1; i < len(idx.charts); i++ {
-		bounds = bounds.Union(idx.charts[i].Bounds)
+		bounds = bounds.Union(idx.charts[i].GeoBounds)
 	}
 
 	return bounds
