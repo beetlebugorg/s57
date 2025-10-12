@@ -36,6 +36,28 @@ func (b Bounds) Expand(margin float64) Bounds {
 	}
 }
 
+// Union returns a new Bounds that encompasses both this bounds and the other.
+//
+// The resulting bounds will be the smallest bounding box that contains both inputs.
+func (b Bounds) Union(other Bounds) Bounds {
+	result := b
+
+	if other.MinLon < result.MinLon {
+		result.MinLon = other.MinLon
+	}
+	if other.MaxLon > result.MaxLon {
+		result.MaxLon = other.MaxLon
+	}
+	if other.MinLat < result.MinLat {
+		result.MinLat = other.MinLat
+	}
+	if other.MaxLat > result.MaxLat {
+		result.MaxLat = other.MaxLat
+	}
+
+	return result
+}
+
 // featureBounds calculates the bounding box for a feature's geometry.
 func featureBounds(f Feature) Bounds {
 	if len(f.geometry.Coordinates) == 0 {
