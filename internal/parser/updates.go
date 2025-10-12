@@ -200,8 +200,32 @@ func applyFeatureUpdate(chart *chartData, record *iso8211.DataRecord, fridData [
 				featureRec.AGEN, featureRec.FIDN, featureRec.FIDS)
 		}
 
-		// Replace feature data
-		*existing = *featureRec
+		// Merge update record into existing feature
+		// Per S-57 §8.4.2.2: MODIFY only updates fields present in the update record
+		// We must selectively update fields rather than wholesale replacement
+
+		// Always update these core identification fields
+		existing.RecordVersion = featureRec.RecordVersion
+		existing.UpdateInstr = featureRec.UpdateInstr
+
+		// Update attributes if ATTF field present in update record
+		// Note: parseFeatureRecord sets Attributes to empty map if no ATTF, so we
+		// can't distinguish "no ATTF" from "empty ATTF". For now, always update.
+		// TODO: Consider tracking which fields were present in the raw record
+		if featureRec.Attributes != nil && len(featureRec.Attributes) > 0 {
+			existing.Attributes = featureRec.Attributes
+		}
+
+		// Update spatial refs ONLY if FSPT field present in update record
+		// Per S-57 §8.4.2.2.b: FSPT modification controlled by FSPC field
+		// If FSPT field is present, parseFeatureRecord will set SpatialRefs (even if empty)
+		// If FSPT field is absent, parseFeatureRecord leaves SpatialRefs as nil
+		_, hasFSPT := record.Fields["FSPT"]
+		if hasFSPT {
+			existing.SpatialRefs = featureRec.SpatialRefs
+		}
+		// If FSPT not present in update, preserve existing SpatialRefs
+
 		// Keep reference in index
 		chart.featuresByID[key] = existing
 

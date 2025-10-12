@@ -103,17 +103,17 @@ func parseSpatialRecordInternal(record *iso8211.DataRecord, comf int32, somf int
 func parseCoordinates2D(data []byte, comf int32) [][]float64 {
 	coords := make([][]float64, 0)
 
-	// SG2D structure per S-57 §7.7.1.6: SHOULD BE [YCOO(4 bytes), XCOO(4 bytes)]
+	// SG2D structure per S-57 §7.7.1.6: [YCOO(4 bytes), XCOO(4 bytes)]
 	// Each coordinate pair is 8 bytes (2 * int32 signed)
-	// NOTE: Despite spec saying [Y,X], actual files appear to store [X,Y] (lon,lat)
+	// First 4 bytes = Y (latitude), Second 4 bytes = X (longitude)
 	offset := 0
 	for offset+8 <= len(data) {
-		// Parse first 4 bytes - appears to be X (longitude) despite spec
-		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse first 4 bytes - Y (latitude) per S-57 spec
+		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
-		// Parse second 4 bytes - appears to be Y (latitude) despite spec
-		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse second 4 bytes - X (longitude) per S-57 spec
+		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
 		// Convert to float64 and scale by COMF
@@ -134,18 +134,18 @@ func parseCoordinates2D(data []byte, comf int32) [][]float64 {
 func parseCoordinates3D(data []byte, comf int32, somf int32) [][]float64 {
 	coords := make([][]float64, 0)
 
-	// SG3D structure per S-57 §7.7.1.7: SHOULD BE [YCOO(4 bytes), XCOO(4 bytes), VE3D(4 bytes)]
+	// SG3D structure per S-57 §7.7.1.7: [YCOO(4 bytes), XCOO(4 bytes), VE3D(4 bytes)]
 	// Each coordinate triple is 12 bytes (3 * int32 signed)
 	// YCOO/XCOO scaled by COMF, VE3D scaled by SOMF
-	// NOTE: Despite spec saying [Y,X,Z], actual files appear to store [X,Y,Z] (lon,lat,depth)
+	// First 4 bytes = Y (latitude), Second 4 bytes = X (longitude), Third 4 bytes = Z (depth)
 	offset := 0
 	for offset+12 <= len(data) {
-		// Parse first 4 bytes - appears to be X (longitude) despite spec
-		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse first 4 bytes - Y (latitude) per S-57 spec
+		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
-		// Parse second 4 bytes - appears to be Y (latitude) despite spec
-		y := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		// Parse second 4 bytes - X (longitude) per S-57 spec
+		x := int32(binary.LittleEndian.Uint32(data[offset : offset+4]))
 		offset += 4
 
 		// Parse VE3D (depth/sounding) - 4 bytes signed int32

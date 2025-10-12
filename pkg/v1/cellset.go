@@ -99,6 +99,46 @@ func LoadCells(paths []string, parser Parser) (*CellSet, error) {
 	return cs, nil
 }
 
+// LoadCellsWithErrors loads multiple ENC files with error tolerance.
+//
+// Unlike LoadCells, this function continues loading even when individual
+// charts fail. Returns a CellSet with successfully loaded cells and a slice
+// of errors for failed charts.
+//
+// This is useful for large datasets where some charts may be corrupt but
+// the majority are valid. The caller can decide how to handle partial failures.
+//
+// Example:
+//
+//	parser := s57.NewParser()
+//	paths := []string{"chart1.000", "corrupt.000", "chart3.000"}
+//	cellSet, errs := s57.LoadCellsWithErrors(paths, parser)
+//	if len(errs) > 0 {
+//	    fmt.Printf("Skipped %d charts due to errors\n", len(errs))
+//	    for _, err := range errs {
+//	        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+//	    }
+//	}
+//	// Continue rendering with valid charts
+func LoadCellsWithErrors(paths []string, parser Parser) (*CellSet, []error) {
+	cs := &CellSet{
+		Cells: make([]*Cell, 0, len(paths)),
+	}
+
+	var errors []error
+
+	for _, path := range paths {
+		cell, err := LoadCell(path, parser)
+		if err != nil {
+			errors = append(errors, fmt.Errorf("load cell %s: %w", path, err))
+			continue
+		}
+		cs.Cells = append(cs.Cells, cell)
+	}
+
+	return cs, errors
+}
+
 // Identifier returns the cell's identifier (DSNM from DSID).
 func (c *Cell) Identifier() string {
 	return c.Chart.DatasetName()

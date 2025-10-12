@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"os"
 )
 
 // topology.go - VRPT (Vector Record Pointer Table) topology resolution
@@ -202,7 +201,7 @@ func (r *polygonBuilder) buildRingsWithOrientation(edgeRefs []spatialRef, orient
 	// Build single ring from edges in FSPT order (matching marinejet lines 373-446)
 	coords := make([][2]float64, 0)
 
-	for idx, edgeRef := range edgeRefs {
+	for _, edgeRef := range edgeRefs {
 		// Load edge
 		edge, err := r.loadEdge(edgeRef.RCID)
 		if err != nil {
@@ -222,12 +221,6 @@ func (r *polygonBuilder) buildRingsWithOrientation(edgeRefs []spatialRef, orient
 		}
 
 		coords = append(coords, edgeCoords...)
-
-		// Debug for large rings
-		if len(edgeRefs) >= 20 && (idx < 5 || idx == len(edgeRefs)-1) {
-			fmt.Fprintf(os.Stderr, "  [%d] Edge %d: added %d coords, total=%d\n",
-				idx, edgeRef.RCID, len(edgeCoords), len(coords))
-		}
 	}
 
 	// Ensure ring closure

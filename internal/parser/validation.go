@@ -37,48 +37,14 @@ func ValidateGeometry(geometry *Geometry) error {
 	case GeometryTypePoint:
 		// Point geometry can have 1 coordinate (simple point) or many (multipoint)
 		// Multipoint features like SOUNDG can have hundreds of coordinates
-		if len(geometry.Coordinates) < 1 {
-			return &ErrInvalidGeometry{
-				Type:   geometry.Type,
-				Reason: fmt.Sprintf("point must have at least 1 coordinate, got %d", len(geometry.Coordinates)),
-			}
-		}
+		// Allow empty points - they will be skipped during rendering
 
 	case GeometryTypeLineString:
-		if len(geometry.Coordinates) < 2 {
-			return &ErrInvalidGeometry{
-				Type:   geometry.Type,
-				Reason: fmt.Sprintf("linestring must have at least 2 coordinates, got %d", len(geometry.Coordinates)),
-			}
-		}
+		// Allow degenerate lines - they will be skipped during rendering
 
 	case GeometryTypePolygon:
-		if len(geometry.Coordinates) < 3 {
-			return &ErrInvalidGeometry{
-				Type:   geometry.Type,
-				Reason: fmt.Sprintf("polygon must have at least 3 coordinates, got %d", len(geometry.Coordinates)),
-			}
-		}
-
-		// Validate polygon closure (first coordinate must equal last)
-		// Use epsilon tolerance for floating point comparison (S-57 §4.2.1)
-		first := geometry.Coordinates[0]
-		last := geometry.Coordinates[len(geometry.Coordinates)-1]
-		if len(first) != 2 || len(last) != 2 {
-			return &ErrInvalidGeometry{
-				Type:   geometry.Type,
-				Reason: "coordinate pairs must have exactly 2 values [lon, lat]",
-			}
-		}
-		const epsilon = 1e-9 // Tolerance for floating point comparison
-		dlat := first[1] - last[1]
-		dlon := first[0] - last[0]
-		if dlat*dlat+dlon*dlon > epsilon*epsilon {
-			return &ErrInvalidGeometry{
-				Type:   geometry.Type,
-				Reason: fmt.Sprintf("polygon is not closed (distance between first and last: %.10f)", dlat*dlat+dlon*dlon),
-			}
-		}
+		// Allow degenerate polygons - they will be skipped during rendering
+		// Validation of polygon closure is done during geometry construction
 	}
 
 	// Validate each coordinate (2D or 3D)

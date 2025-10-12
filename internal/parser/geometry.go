@@ -91,10 +91,12 @@ func constructLineStringGeometry(featureRec *featureRecord, spatialRecords map[s
 	}
 
 	if len(allCoords) < 2 {
-		return Geometry{}, &ErrMissingSpatialRecord{
-			FeatureID: featureRec.ID,
-			SpatialID: featureRec.SpatialRefs[0].RCID,
-		}
+		// Not enough coordinates for a valid line
+		// Return empty geometry (feature will be skipped by caller)
+		return Geometry{
+			Type:        GeometryTypeLineString,
+			Coordinates: [][]float64{},
+		}, nil
 	}
 
 	return Geometry{
@@ -142,10 +144,12 @@ func constructPointGeometry(featureRec *featureRecord, spatialRecords map[spatia
 	}
 
 	if len(allCoords) == 0 {
-		return Geometry{}, &ErrMissingSpatialRecord{
-			FeatureID: featureRec.ID,
-			SpatialID: featureRec.SpatialRefs[0].RCID,
-		}
+		// All spatial refs were missing or had no coordinates
+		// Return empty geometry (feature will be skipped by caller)
+		return Geometry{
+			Type:        GeometryTypePoint,
+			Coordinates: [][]float64{},
+		}, nil
 	}
 
 	return Geometry{
@@ -255,6 +259,15 @@ func constructPolygonGeometry(featureRec *featureRecord, spatialRecords map[spat
 			}
 		}
 
+		// Check if we have enough coordinates for a valid polygon
+		if len(allCoords) < 3 {
+			// Degenerate polygon - return empty geometry
+			return Geometry{
+				Type:        GeometryTypePolygon,
+				Coordinates: [][]float64{},
+			}, nil
+		}
+
 		return Geometry{
 			Type:        GeometryTypePolygon,
 			Coordinates: allCoords,
@@ -272,6 +285,15 @@ func constructPolygonGeometry(featureRec *featureRecord, spatialRecords map[spat
 				}
 			}
 		}
+	}
+
+	// Check if we have enough coordinates for a valid polygon
+	if len(allCoords) < 3 {
+		// Degenerate polygon - return empty geometry
+		return Geometry{
+			Type:        GeometryTypePolygon,
+			Coordinates: [][]float64{},
+		}, nil
 	}
 
 	// Ensure polygon closure
