@@ -3,7 +3,7 @@ package s57_test
 import (
 	"testing"
 
-	s57 "github.com/beetlebugorg/s57/pkg/v1"
+	s57 "github.com/beetlebugorg/s57/pkg/s57"
 )
 
 func TestSOUNDGWith3DCoordinates(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/beetlebugorg/iso8211/pkg/v1"
+	"github.com/beetlebugorg/iso8211/pkg/iso8211"
 )
 
 // BenchmarkParse benchmarks parsing a real S-57 chart
@@ -37,7 +37,7 @@ func BenchmarkVRPTResolution(b *testing.B) {
 		{RCNM: int(spatialTypeIsolatedNode), RCID: 100}: {
 			ID:         100,
 			RecordType: spatialTypeIsolatedNode,
-			Coordinates: [][2]float64{
+			Coordinates: [][]float64{
 				{-71.0, 42.0}, {-71.1, 42.1}, {-71.2, 42.2},
 			},
 		},

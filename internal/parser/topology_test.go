@@ -21,7 +21,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 1}: {
 					ID:         1,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{0.0, 0.0},
 						{1.0, 0.0},
 					},
@@ -34,7 +34,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 2}: {
 					ID:         2,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{1.0, 0.0},
 						{0.5, 1.0},
 					},
@@ -47,7 +47,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 3}: {
 					ID:         3,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{0.5, 1.0},
 						{0.0, 0.0},
 					},
@@ -73,7 +73,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 10}: {
 					ID:         10,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{0.0, 0.0},
 						{2.0, 0.0},
 					},
@@ -85,7 +85,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 11}: {
 					ID:         11,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{2.0, 0.0},
 						{2.0, 2.0},
 					},
@@ -97,7 +97,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 12}: {
 					ID:         12,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{2.0, 2.0},
 						{0.0, 2.0},
 					},
@@ -109,7 +109,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 13}: {
 					ID:         13,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{0.0, 2.0},
 						{0.0, 0.0},
 					},
@@ -141,7 +141,7 @@ func TestVRPTResolver(t *testing.T) {
 				{RCNM: int(spatialTypeEdge), RCID: 1}: {
 					ID:         1,
 					RecordType: spatialTypeEdge,
-					Coordinates: [][2]float64{
+					Coordinates: [][]float64{
 						{0.0, 0.0},
 						{1.0, 0.0},
 					},
@@ -281,7 +281,7 @@ func TestLoadEdge(t *testing.T) {
 		{RCNM: int(spatialTypeEdge), RCID: 100}: {
 			ID:         100,
 			RecordType: spatialTypeEdge,
-			Coordinates: [][2]float64{
+			Coordinates: [][]float64{
 				{-1.0, 51.0},
 				{-0.9, 51.1},
 			},
@@ -293,7 +293,7 @@ func TestLoadEdge(t *testing.T) {
 		{RCNM: int(spatialTypeIsolatedNode), RCID: 200}: {
 			ID:         200,
 			RecordType: spatialTypeIsolatedNode, // Not an edge
-			Coordinates: [][2]float64{
+			Coordinates: [][]float64{
 				{0.0, 0.0},
 			},
 		},

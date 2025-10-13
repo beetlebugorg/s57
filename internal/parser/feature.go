@@ -3,7 +3,7 @@ package parser
 import (
 	"encoding/binary"
 
-	"github.com/beetlebugorg/iso8211/pkg/v1"
+	"github.com/beetlebugorg/iso8211/pkg/iso8211"
 )
 
 // GeometryType represents the type of geometry for a feature

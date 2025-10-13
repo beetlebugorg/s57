@@ -122,7 +122,7 @@ func TestResolveVectorPointers(t *testing.T) {
 		{RCNM: int(spatialTypeIsolatedNode), RCID: 100}: {
 			ID:         100,
 			RecordType: spatialTypeIsolatedNode,
-			Coordinates: [][2]float64{
+			Coordinates: [][]float64{
 				{-71.0, 42.0},
 				{-71.1, 42.1},
 			},
@@ -132,7 +132,7 @@ func TestResolveVectorPointers(t *testing.T) {
 		{RCNM: int(spatialTypeEdge), RCID: 200}: {
 			ID:         200,
 			RecordType: spatialTypeEdge,
-			Coordinates: [][2]float64{
+			Coordinates: [][]float64{
 				{-70.0, 43.0},
 				{-70.1, 43.1},
 			},
@@ -218,7 +218,7 @@ func TestCircularReferenceDetection(t *testing.T) {
 		{RCNM: int(spatialTypeEdge), RCID: 100}: {
 			ID:          100,
 			RecordType:  spatialTypeEdge,
-			Coordinates: [][2]float64{{-71.0, 42.0}},
+			Coordinates: [][]float64{{-71.0, 42.0}},
 			VectorPointers: []vectorPointer{
 				{
 					TargetRCNM:  130,
@@ -230,7 +230,7 @@ func TestCircularReferenceDetection(t *testing.T) {
 		{RCNM: int(spatialTypeEdge), RCID: 200}: {
 			ID:          200,
 			RecordType:  spatialTypeEdge,
-			Coordinates: [][2]float64{{-70.0, 43.0}},
+			Coordinates: [][]float64{{-70.0, 43.0}},
 			VectorPointers: []vectorPointer{
 				{
 					TargetRCNM:  130,

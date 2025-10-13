@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/beetlebugorg/iso8211/pkg/v1"
+	"github.com/beetlebugorg/iso8211/pkg/iso8211"
 )
 
 // UpdateInstruction represents the RUIN (Record Update Instruction) field values

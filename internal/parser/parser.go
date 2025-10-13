@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/beetlebugorg/iso8211/pkg/v1"
+	"github.com/beetlebugorg/iso8211/pkg/iso8211"
 )
 
 // Parser parses S-57 ENC files and extracts features.
