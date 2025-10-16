@@ -37,7 +37,7 @@ While this code was written by AI, it is designed to be **completely usable by h
 ## Installation
 
 ```bash
-go get github.com/beetlebugorg/s57/pkg/v1
+go get github.com/beetlebugorg/s57
 ```
 
 ## Quick Start
@@ -49,7 +49,7 @@ import (
     "fmt"
     "log"
 
-    s57 "github.com/beetlebugorg/s57/pkg/v1"
+    "github.com/beetlebugorg/s57/pkg/s57"
 )
 
 func main() {
@@ -245,6 +245,7 @@ The parser automatically discovers and applies update files when parsing a base 
 
 This parser requires:
 - [github.com/beetlebugorg/iso8211](https://github.com/beetlebugorg/iso8211) - ISO 8211 file format parser
+- [github.com/dhconnelly/rtreego](https://github.com/dhconnelly/rtreego) - R-tree for spatial indexing
 
 ## Testing
 
@@ -295,8 +296,12 @@ Contributions welcome! Please ensure:
 
 ## Resources
 
+### Official Standards
 - [IHO S-57 Edition 3.1 Main Specification](https://iho.int/uploads/user/pubs/standards/s-57/31Main.pdf)
 - [S-57 Appendix A - Object Catalogue Chapter 1](https://iho.int/uploads/user/pubs/standards/s-57/31ApAch1.pdf)
 - [S-57 Appendix A - Object Catalogue Chapter 2 (Attributes)](https://iho.int/uploads/user/pubs/standards/s-57/31ApAch2.pdf)
 - [ISO/IEC 8211 Summary (IHO)](https://iho.int/uploads/user/Services%20and%20Standards/S-100WG/S-100WG7/S100WG7-4.16_2022_EN_ISO_IEC8211_Summary.pdf)
 - [IHO Standards and Specifications](https://iho.int/en/standards-and-specifications)
+
+### Documentation
+- [API Documentation](https://beetlebugorg.github.io/s57/) - Complete usage guide with examples
