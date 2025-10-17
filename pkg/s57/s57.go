@@ -2,12 +2,6 @@
 package s57
 
 import (
-	"archive/zip"
-	"fmt"
-	"io"
-	"os"
-	"strings"
-
 	"github.com/beetlebugorg/s57/internal/parser"
 	"github.com/dhconnelly/rtreego"
 )
@@ -46,106 +40,7 @@ type parserWrapper struct {
 }
 
 func (p *parserWrapper) Parse(filename string) (*Chart, error) {
-	// Check if this is a zip:// URL for streaming from zip
-	if strings.HasPrefix(filename, "zip://") {
-		return p.parseFromZip(filename)
-	}
-
 	internalChart, err := p.internal.Parse(filename)
-	if err != nil {
-		return nil, err
-	}
-	return convertChart(internalChart), nil
-}
-
-// parseFromZip parses an S-57 file directly from a zip archive without extracting to disk.
-// Format: zip:///path/to/file.zip!path/within/zip.000
-func (p *parserWrapper) parseFromZip(zipURL string) (*Chart, error) {
-	// Parse zip:// URL - format is: zip://zippath!entrypath
-	parts := strings.SplitN(strings.TrimPrefix(zipURL, "zip://"), "!", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid zip URL format: %s (expected zip://path!entry)", zipURL)
-	}
-
-	zipPath := parts[0]
-	entryPath := parts[1]
-
-	// Open zip file
-	r, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return nil, fmt.Errorf("open zip: %w", err)
-	}
-	defer r.Close()
-
-	// Find the base cell (.000 file)
-	var baseFile *zip.File
-	for _, f := range r.File {
-		if f.Name == entryPath {
-			baseFile = f
-			break
-		}
-	}
-	if baseFile == nil {
-		return nil, fmt.Errorf("file not found in zip: %s", entryPath)
-	}
-
-	// Extract base file to temporary file for parsing
-	// (iso8211 parser needs a real file path unfortunately)
-	tmpFile, err := os.CreateTemp("", "s57-*.000")
-	if err != nil {
-		return nil, fmt.Errorf("create temp file: %w", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	// Copy from zip to temp file
-	rc, err := baseFile.Open()
-	if err != nil {
-		return nil, fmt.Errorf("open zip entry: %w", err)
-	}
-	defer rc.Close()
-
-	if _, err := io.Copy(tmpFile, rc); err != nil {
-		return nil, fmt.Errorf("extract to temp: %w", err)
-	}
-	tmpFile.Close()
-
-	// Now find and extract all update files (.001, .002, etc.)
-	for updateNum := 1; updateNum <= 999; updateNum++ {
-		updatePath := fmt.Sprintf("%s.%03d", strings.TrimSuffix(entryPath, ".000"), updateNum)
-
-		var updateFile *zip.File
-		for _, f := range r.File {
-			if f.Name == updatePath {
-				updateFile = f
-				break
-			}
-		}
-
-		if updateFile == nil {
-			break // No more updates
-		}
-
-		// Extract update file to temp
-		tmpUpdate, err := os.CreateTemp("", fmt.Sprintf("s57-*.%03d", updateNum))
-		if err != nil {
-			continue // Skip this update
-		}
-		defer os.Remove(tmpUpdate.Name())
-
-		urc, err := updateFile.Open()
-		if err != nil {
-			tmpUpdate.Close()
-			continue
-		}
-
-		io.Copy(tmpUpdate, urc)
-		urc.Close()
-		tmpUpdate.Close()
-	}
-
-	// Parse the temp file (with updates in same directory)
-	internalChart, err := p.internal.Parse(tmpFile.Name())
 	if err != nil {
 		return nil, err
 	}
