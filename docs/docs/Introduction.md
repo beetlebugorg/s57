@@ -9,20 +9,13 @@ A pure Go parser for IHO S-57 Electronic Navigational Chart (ENC) files, the int
 
 :::caution Learning Project
 
-**This is a personal learning project with two primary goals:**
+**Experimental software for learning and development only.** This project explores AI-assisted development with complex marine electronic navigational charts standards.
 
-1. **Exploring AI-assisted development** - Pushing the boundaries of what AI coding agents can accomplish with complex technical standards
-2. **Learning marine digital chart technology** - Deep dive into ISO 8211, S-57 ENC, and S-52 presentation standards
+**⚠️ Not for production use or actual navigation.**
 
-This library was developed using an **AI-first, specification-driven** methodology where every feature is implemented by first analyzing official specifications, then generating idiomatic Go code.
+**Documentation as Specification:** This documentation serves as a living specification that drives development. We strive to ensure documented features are implemented and working, but we're actively refining our development and testing workflows. Some features may be in progress.
 
-**Key characteristics:**
-- 🤖 **AI-generated code** with human oversight
-- 📋 **Specification-first** - Every decision traceable to standards
-- ✅ **Learning-focused** - Prioritizes understanding over production readiness
-- 🧪 **Experimental** - Exploring AI capabilities with complex standards
-
-**⚠️ Safety Notice:** While the code aims for quality and correctness, this is **not production-ready navigation software**. It's a learning vehicle for understanding both marine chart formats and AI-assisted development. **Do not use for actual marine navigation or safety-critical applications.**
+**Not affiliated with IHO (International Hydrographic Organization).** Independent third-party implementation of publicly available specifications.
 
 :::
 
