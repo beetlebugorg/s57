@@ -12,22 +12,21 @@ A pure Go parser for IHO S-57 Electronic Navigational Chart (ENC) files, the int
 
 S-57 is the data transfer standard developed by the International Hydrographic Organization (IHO) for digital hydrographic data. This parser reads S-57 ENC datasets, extracting features, geometries, and metadata.
 
-## Project Disclaimer
+## About This Project
 
-**This is a personal learning project with two primary goals:**
+**Experimental software for learning and development only.** This project explores AI-assisted development with complex marine electronic navigational charts standards.
 
-1. **Exploring AI-assisted development** - Pushing the boundaries of what AI coding agents can accomplish with complex technical standards
-2. **Learning marine digital chart technology** - Deep dive into ISO 8211, S-57 ENC, and S-52 presentation standards
+**⚠️ Not for production use or actual navigation.**
 
-This library was developed using an **AI-first, specification-driven** methodology. Every feature is implemented by first reading and analyzing the official IHO S-57 and ISO 8211 specifications, then generating clean, idiomatic Go code that precisely follows the standards.
+**Documentation as Specification:** The documentation serves as a living specification that drives development. We strive to ensure documented features are implemented and working, but we're actively refining our development and testing workflows. Some features may be in progress.
 
-**Key characteristics:**
-- 🤖 **AI-generated code** - Written with human oversight
-- 📋 **Specification-first** - Every implementation decision traceable to IHO S-57 spec sections
-- ✅ **Learning-focused** - Prioritizes understanding over production readiness
-- 🧪 **Experimental** - Exploring how far AI can go with complex standards
+**Not affiliated with IHO (International Hydrographic Organization).** Independent third-party implementation of publicly available specifications.
 
-**⚠️ Safety Notice:** While the code aims for quality and correctness, this is **not production-ready navigation software**. It's a learning vehicle for understanding both marine chart formats and AI-assisted software development. Do not use for actual marine navigation or safety-critical applications.
+**Useful for:**
+- Learning how marine electronic navigational charts work
+- Experimenting with S-57 chart parsing and feature extraction
+- Understanding IHO S-57 format/specification
+- Building proof-of-concept marine electronic navigational chart tools
 
 ## Features
 
