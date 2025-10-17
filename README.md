@@ -1,8 +1,12 @@
 # S-57 Parser for Go
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/beetlebugorg/s57.svg)](https://pkg.go.dev/github.com/beetlebugorg/s57)
+[![CI](https://github.com/beetlebugorg/s57/actions/workflows/ci.yml/badge.svg)](https://github.com/beetlebugorg/s57/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-github.io-blue)](https://beetlebugorg.github.io/s57)
 
 A pure Go parser for IHO S-57 Electronic Navigational Chart (ENC) files, the international standard for digital hydrographic data used worldwide in maritime navigation.
+
+📖 **[Documentation](https://beetlebugorg.github.io/s57)** | 📦 **[Go Package](https://pkg.go.dev/github.com/beetlebugorg/s57)** | 🗺️ **[Examples](https://beetlebugorg.github.io/s57/docs/examples)**
 
 ## Overview
 

@@ -1,0 +1,64 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Run tests with race detection
+        run: go test -v -race ./...
+
+  build:
+    name: Build Library and Examples
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build Go library
+        run: go build ./...
+
+      - name: Verify documentation examples compile
+        run: make docs-check-examples
+
+  docs:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install documentation dependencies
+        run: |
+          cd docs
+          bun install --frozen-lockfile
+
+      - name: Build documentation site
+        run: |
+          cd docs
+          bun run build
