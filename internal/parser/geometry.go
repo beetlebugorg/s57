@@ -169,9 +169,7 @@ func constructPointGeometry(featureRec *featureRecord, spatialRecords map[spatia
 		if len(spatial.Coordinates) > 0 {
 			// Extract ALL coordinates from spatial record
 			// Preserve all dimensions (2D or 3D) - don't strip Z coordinates
-			for _, coord := range spatial.Coordinates {
-				allCoords = append(allCoords, coord) // Keep full coordinate (with Z if present)
-			}
+			allCoords = append(allCoords, spatial.Coordinates...)
 		}
 	}
 
