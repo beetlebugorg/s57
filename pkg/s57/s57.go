@@ -606,8 +606,10 @@ func (c *Chart) buildSpatialIndex() {
 	var chartBounds *Bounds
 
 	// First pass: look for M_COVR features
+	var foundMCOVR bool
 	for _, feature := range c.features {
 		if feature.ObjectClass() == "M_COVR" {
+			foundMCOVR = true
 			fb := featureBounds(feature)
 			if chartBounds == nil {
 				chartBounds = &fb
@@ -640,12 +642,13 @@ func (c *Chart) buildSpatialIndex() {
 		}
 		rtree.Insert(indexed)
 
-		// Only use feature bounds if we didn't find M_COVR
-		if chartBounds == nil {
-			// Expand chart bounds
+		// Only calculate bounds from features if no M_COVR was found
+		if !foundMCOVR {
 			if chartBounds == nil {
+				// Initialize with first feature bounds
 				chartBounds = &fb
 			} else {
+				// Expand chart bounds to include this feature
 				if fb.MinLon < chartBounds.MinLon {
 					chartBounds.MinLon = fb.MinLon
 				}

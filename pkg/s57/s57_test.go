@@ -133,9 +133,9 @@ func TestFeaturesInBounds(t *testing.T) {
 func TestChartBounds(t *testing.T) {
 	chart := &Chart{
 		features: []Feature{
-			{id: 1, geometry: Geometry{Coordinates: [][]float64{{-71.0, 42.0}}}},
-			{id: 2, geometry: Geometry{Coordinates: [][]float64{{-71.5, 42.5}}}},
-			{id: 3, geometry: Geometry{Coordinates: [][]float64{{-70.8, 41.9}}}},
+			{id: 1, objectClass: "DEPCNT", geometry: Geometry{Coordinates: [][]float64{{-71.0, 42.0}}}},
+			{id: 2, objectClass: "DEPCNT", geometry: Geometry{Coordinates: [][]float64{{-71.5, 42.5}}}},
+			{id: 3, objectClass: "DEPCNT", geometry: Geometry{Coordinates: [][]float64{{-70.8, 41.9}}}},
 		},
 	}
 	chart.buildSpatialIndex()

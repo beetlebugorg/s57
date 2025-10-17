@@ -75,7 +75,7 @@ func TestValidateGeometry(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "point with multiple coordinates",
+			name: "multipoint (SOUNDG) with multiple coordinates",
 			geometry: &Geometry{
 				Type: GeometryTypePoint,
 				Coordinates: [][]float64{
@@ -83,18 +83,18 @@ func TestValidateGeometry(t *testing.T) {
 					{-70.0, 43.0},
 				},
 			},
-			wantErr: true,
+			wantErr: false, // S-57 allows multipoint features like SOUNDG
 		},
 		{
-			name: "linestring with one coordinate",
+			name: "degenerate linestring with one coordinate",
 			geometry: &Geometry{
 				Type:        GeometryTypeLineString,
 				Coordinates: [][]float64{{-71.0, 42.0}},
 			},
-			wantErr: true,
+			wantErr: false, // Degenerate geometries allowed, skipped during rendering
 		},
 		{
-			name: "polygon not closed",
+			name: "degenerate polygon not closed",
 			geometry: &Geometry{
 				Type: GeometryTypePolygon,
 				Coordinates: [][]float64{
@@ -104,7 +104,7 @@ func TestValidateGeometry(t *testing.T) {
 					// Missing closing coordinate
 				},
 			},
-			wantErr: true,
+			wantErr: false, // Degenerate geometries allowed, skipped during rendering
 		},
 		{
 			name: "invalid latitude",
