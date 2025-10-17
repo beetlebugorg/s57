@@ -6,6 +6,109 @@ import (
 	"github.com/beetlebugorg/iso8211/pkg/iso8211"
 )
 
+// datasetMetadata contains dataset identification and metadata from DSID record.
+// This is private - access metadata through Chart methods.
+//
+// Reference: S-57 Part 3 §7.3.1.1 (31Main.pdf p3.34-3.35, table 7.4):
+// Data Set Identification field structure with all subfields.
+type datasetMetadata struct {
+	rcnm int    // Record name (10 = dataset)
+	rcid int64  // Record identification number
+	expp int    // Exchange purpose (1=New, 2=Revision)
+	intu int    // Intended usage
+	dsnm string // Data set name - chart identifier (e.g., "GB5X01NE")
+	edtn string // Edition number (e.g., "2")
+	updn string // Update number (e.g., "0" for base cell)
+	uadt string // Update application date (YYYYMMDD format)
+	isdt string // Issue date (YYYYMMDD format)
+	sted string // Edition number of S-57 (e.g., "03.1")
+	prsp int    // Product specification (1=ENC, 2=ODD)
+	psdn string // Product specification description
+	pred string // Product specification edition number
+	prof int    // Application profile (1=EN new, 2=ER revision, 3=DD)
+	agen int    // Producing agency code
+	comt string // Comment field
+}
+
+// DatasetName returns the dataset name (chart identifier).
+// Example: "US5MA22M", "GB5X01NE"
+func (m *datasetMetadata) DatasetName() string {
+	return m.dsnm
+}
+
+// Edition returns the edition number as a string.
+func (m *datasetMetadata) Edition() string {
+	return m.edtn
+}
+
+// UpdateNumber returns the update number as a string.
+func (m *datasetMetadata) UpdateNumber() string {
+	return m.updn
+}
+
+// UpdateDate returns the update application date (YYYYMMDD format).
+func (m *datasetMetadata) UpdateDate() string {
+	return m.uadt
+}
+
+// IssueDate returns the issue date (YYYYMMDD format).
+func (m *datasetMetadata) IssueDate() string {
+	return m.isdt
+}
+
+// S57Edition returns the S-57 standard edition (e.g., "03.1").
+func (m *datasetMetadata) S57Edition() string {
+	return m.sted
+}
+
+// ProducingAgency returns the agency code.
+func (m *datasetMetadata) ProducingAgency() int {
+	return m.agen
+}
+
+// Comment returns the comment field.
+func (m *datasetMetadata) Comment() string {
+	return m.comt
+}
+
+// ExchangePurpose returns a human-readable exchange purpose string.
+func (m *datasetMetadata) ExchangePurpose() string {
+	switch m.expp {
+	case 1:
+		return "New"
+	case 2:
+		return "Revision"
+	default:
+		return "Unknown"
+	}
+}
+
+// ProductSpecification returns a human-readable product specification string.
+func (m *datasetMetadata) ProductSpecification() string {
+	switch m.prsp {
+	case 1:
+		return "ENC"
+	case 2:
+		return "ODD"
+	default:
+		return "Unknown"
+	}
+}
+
+// ApplicationProfile returns a human-readable application profile string.
+func (m *datasetMetadata) ApplicationProfile() string {
+	switch m.prof {
+	case 1:
+		return "EN (ENC New)"
+	case 2:
+		return "ER (ENC Revision)"
+	case 3:
+		return "DD (Data Dictionary)"
+	default:
+		return "Unknown"
+	}
+}
+
 // datasetParams holds dataset-level parameters from DSPM record
 // S-57 §7.3.2: Data Set Parameter Record
 type datasetParams struct {

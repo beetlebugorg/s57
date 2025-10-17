@@ -55,8 +55,6 @@ func (c *Chart) Bounds() Bounds
 // Get feature count
 func (c *Chart) FeatureCount() int
 
-// Get dataset metadata
-func (c *Chart) Metadata() *DatasetMetadata
 
 // Get dataset name (chart ID)
 func (c *Chart) DatasetName() string
@@ -117,7 +115,7 @@ Coordinates are always `[longitude, latitude]` in decimal degrees (WGS84).
 
 ```go
 // Point: single coordinate
-geometry.Coordinates[0] // [lon, lat]
+geometry.Coordinates[0] // [lon, lat] or [lon, lat, depth] for soundings
 
 // LineString: array of coordinates
 for _, coord := range geometry.Coordinates {
@@ -189,25 +187,6 @@ opts := s57.ParseOptions{
 }
 ```
 
-### DatasetMetadata
-
-Complete dataset identification from DSID record.
-
-```go
-type DatasetMetadata struct {
-    DSNM string // Dataset name (chart ID)
-    EDTN string // Edition number
-    UPDN string // Update number
-    ISDT string // Issue date (YYYYMMDD)
-    STED string // Edition date (YYYYMMDD)
-
-    // Coordinate system
-    CSCL int    // Compilation scale (e.g., 150000)
-
-    // Additional fields...
-}
-```
-
 ## Common Patterns
 
 ### Basic Parsing
@@ -269,32 +248,6 @@ opts := s57.ParseOptions{ApplyUpdates: false}
 chart, _ := parser.ParseWithOptions("GB5X01SW.000", opts)
 fmt.Printf("Update: %s\n", chart.UpdateNumber()) // "000"
 ```
-
-## Performance
-
-### Spatial Indexing
-
-The parser uses R-tree spatial indexing for fast viewport queries:
-
-- `FeaturesInBounds()`: O(log n) instead of O(n)
-- Typical speedup: 100× for large charts
-- Automatically built during parsing
-
-### Memory Usage
-
-Typical memory usage:
-- Small chart (< 1MB): ~10-20 MB RAM
-- Medium chart (1-10MB): ~50-100 MB RAM
-- Large chart (10-50MB): ~200-500 MB RAM
-
-### Parsing Speed
-
-Typical parsing times:
-- Small charts: < 100ms
-- Medium charts: 100ms - 1s
-- Large charts: 1-5s
-
-*Benchmarks on Apple M1 Pro*
 
 ## Error Handling
 

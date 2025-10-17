@@ -1,5 +1,41 @@
 package parser
 
+// GeometryType represents the type of geometry for a feature
+type GeometryType int
+
+const (
+	// GeometryTypePoint represents a single point location
+	GeometryTypePoint GeometryType = iota
+	// GeometryTypeLineString represents a line composed of connected points
+	GeometryTypeLineString
+	// GeometryTypePolygon represents a closed polygon area
+	GeometryTypePolygon
+)
+
+// String returns the string representation of the geometry type
+func (g GeometryType) String() string {
+	switch g {
+	case GeometryTypePoint:
+		return "Point"
+	case GeometryTypeLineString:
+		return "LineString"
+	case GeometryTypePolygon:
+		return "Polygon"
+	default:
+		return "Unknown"
+	}
+}
+
+// Geometry represents the spatial representation of a feature
+// S-57 §7.3: Spatial record structure
+type Geometry struct {
+	// Type is the geometry type (Point, LineString, or Polygon)
+	Type GeometryType
+	// Coordinates is an array of [longitude, latitude] pairs
+	// Per GeoJSON convention: [lon, lat]
+	Coordinates [][]float64
+}
+
 // constructGeometry builds a Geometry from feature and spatial records
 // S-57 §2.1: Features reference spatial records to build geometry
 func constructGeometry(featureRec *featureRecord, spatialRecords map[spatialKey]*spatialRecord) (Geometry, error) {

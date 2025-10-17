@@ -10,7 +10,7 @@ A pure Go parser for IHO S-57 Electronic Navigational Chart (ENC) files, the int
 
 ## Overview
 
-S-57 is the data transfer standard developed by the International Hydrographic Organization (IHO) for digital hydrographic data. This parser provides complete support for reading S-57 ENC datasets with a focus on correctness, performance, and ease of use.
+S-57 is the data transfer standard developed by the International Hydrographic Organization (IHO) for digital hydrographic data. This parser reads S-57 ENC datasets, extracting features, geometries, and metadata.
 
 ## Project Disclaimer
 
@@ -31,18 +31,17 @@ This library was developed using an **AI-first, specification-driven** methodolo
 
 ## Features
 
-- ✅ Full IHO S-57 Edition 3.1 compliance
-- ✅ Parse all S-57 feature types (DEPCNT, DEPARE, BOYCAR, etc.)
-- ✅ Complete spatial topology support (isolated nodes, connected nodes, edges, faces)
+- ✅ IHO S-57 Edition 3.1 parsing
+- ✅ All S-57 feature types (DEPCNT, DEPARE, BOYCAR, etc.)
+- ✅ Spatial topology support (isolated nodes, connected nodes, edges, faces)
 - ✅ Geometry construction (points, line strings, polygons)
 - ✅ Feature attributes extraction
 - ✅ Dataset metadata (DSID) parsing
 - ✅ Coordinate transformation (COMF/SOMF multiplication factors)
-- ✅ **Automatic update file merging (.001, .002, etc.)**
-- ✅ **Full support for INSERT/DELETE/MODIFY operations**
+- ✅ Automatic update file merging (.001, .002, etc.)
+- ✅ INSERT/DELETE/MODIFY update operations
 - ✅ Built on ISO 8211 parser
-- ✅ Zero unsafe code, pure Go
-- ✅ Comprehensive test coverage
+- ✅ Pure Go implementation
 
 ## Installation
 
@@ -99,19 +98,20 @@ The main interface for parsing S-57 files.
 
 ```go
 parser := s57.NewParser()
-collection, err := parser.Parse("chart.000")
+chart, err := parser.Parse("chart.000")
 ```
 
-#### `FeatureCollection`
-Container for parsed features with metadata.
+#### `Chart`
+Container for parsed chart data with features and metadata.
 
 ```go
-type FeatureCollection struct {
-    Features     []Feature
-    ChartID      string
-    FeatureCount int
-    Metadata     *DatasetMetadata
-}
+// Access features
+features := chart.Features()
+
+// Access metadata
+name := chart.DatasetName()
+edition := chart.Edition()
+bounds := chart.Bounds()
 ```
 
 #### `Feature`
@@ -132,20 +132,7 @@ Spatial representation of a feature.
 ```go
 type Geometry struct {
     Type        GeometryType // Point, LineString, Polygon
-    Coordinates [][]float64  // [lon, lat] pairs
-}
-```
-
-#### `DatasetMetadata`
-Complete dataset identification from DSID record.
-
-```go
-type DatasetMetadata struct {
-    DSNM string // Dataset name (chart ID)
-    EDTN string // Edition number
-    UPDN string // Update number
-    ISDT string // Issue date (YYYYMMDD)
-    // ... additional fields
+    Coordinates [][]float64  // [lon, lat] or [lon, lat, depth] for soundings
 }
 ```
 
@@ -155,12 +142,12 @@ Control parsing behavior with `ParseOptions`:
 
 ```go
 opts := s57.ParseOptions{
-    SkipUnknownFeatures: true,     // Skip unsupported feature types
-    ValidateGeometry:    true,     // Validate all coordinates
+    ApplyUpdates:        true,      // Apply update files (default: true)
+    ValidateGeometry:    true,      // Validate all coordinates
     ObjectClassFilter:   []string{"DEPCNT", "DEPARE"}, // Only extract specific types
 }
 
-collection, err := parser.ParseWithOptions("chart.000", opts)
+chart, err := parser.ParseWithOptions("chart.000", opts)
 ```
 
 ## Update File Handling
@@ -211,23 +198,6 @@ The parser looks for updates in sequence until the first gap:
 
 This ensures updates are always applied in the correct order.
 
-## S-57 Feature Types
-
-Common S-57 object classes supported:
-
-- **DEPCNT** - Depth contours
-- **DEPARE** - Depth areas
-- **LNDARE** - Land areas
-- **COALNE** - Coastlines
-- **BOYCAR**, **BOYINB**, **BOYISD**, **BOYLAT**, **BOYSAW**, **BOYSPP** - Buoys (various types)
-- **BCNCAR**, **BCNISD**, **BCNLAT**, **BCNSAW**, **BCNSPP** - Beacons (various types)
-- **LIGHTS** - Lights
-- **OBSTRN** - Obstructions
-- **UWTROC** - Underwater rocks
-- **WRECKS** - Wrecks
-
-And many more... The parser dynamically supports all object classes defined in the ENC data.
-
 ## S-57 Structure
 
 An S-57 ENC file consists of:
@@ -276,18 +246,6 @@ Key S-57 sections:
 - §7.6: Feature records and attributes
 - §7.7: Spatial records and topology
 - Appendix A: Object catalogue
-
-## Performance
-
-The parser is designed for efficient memory use:
-- Streaming ISO 8211 record parsing
-- Minimal allocations
-- Spatial record indexing for O(1) lookups
-
-Typical performance:
-- Small charts (< 1MB): < 100ms
-- Medium charts (1-10MB): 100ms - 1s
-- Large charts (10-50MB): 1-5s
 
 ## Acknowledgments
 

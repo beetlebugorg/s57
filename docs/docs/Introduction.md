@@ -32,18 +32,16 @@ S-57 is the data transfer standard developed by the International Hydrographic O
 
 ## Key Features
 
-- ✅ **Full IHO S-57 Edition 3.1 compliance**
-- ✅ **Parse all S-57 feature types** - Depth contours, buoys, lights, wrecks, and more
-- ✅ **Complete spatial topology** - Points, lines, and polygons with proper geometry construction
+- ✅ **IHO S-57 Edition 3.1 parsing**
+- ✅ **All S-57 feature types** - Depth contours, buoys, lights, wrecks, and more
+- ✅ **Spatial topology support** - Points, lines, and polygons with geometry construction
 - ✅ **Automatic update merging** - Handles .001, .002, etc. update files automatically
-- ✅ **High performance** - R-tree spatial indexing for fast viewport queries
-- ✅ **Pure Go** - Zero unsafe code, comprehensive test coverage
+- ✅ **Spatial indexing** - R-tree for viewport queries
+- ✅ **Pure Go** - No unsafe code
 
 ## Use Cases
 
-This parser is ideal for:
-
-- **Maritime Navigation Software** - Build chart plotters and ECDIS systems
+- **Learning** - Understand S-57 chart format and structure
 - **GIS Applications** - Work with official hydrographic data
 - **Maritime Research** - Analyze bathymetry, hazards, and navigation features
 - **Chart Conversion** - Transform S-57 data to other formats
