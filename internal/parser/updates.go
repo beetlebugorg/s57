@@ -212,7 +212,7 @@ func applyFeatureUpdate(chart *chartData, record *iso8211.DataRecord, fridData [
 		// Note: parseFeatureRecord sets Attributes to empty map if no ATTF, so we
 		// can't distinguish "no ATTF" from "empty ATTF". For now, always update.
 		// TODO: Consider tracking which fields were present in the raw record
-		if featureRec.Attributes != nil && len(featureRec.Attributes) > 0 {
+		if len(featureRec.Attributes) > 0 {
 			existing.Attributes = featureRec.Attributes
 		}
 

@@ -3,6 +3,7 @@ package s57
 import (
 	"fmt"
 	"sort"
+	"strconv"
 )
 
 // Cell represents a loaded ENC cell with metadata for multi-cell rendering.
@@ -145,13 +146,17 @@ func (c *Cell) Identifier() string {
 }
 
 // Edition returns the cell's edition number (EDTN from DSID).
+// Returns 0 if the edition cannot be parsed as an integer.
 func (c *Cell) Edition() int {
-	return parseIntOrZero(c.Chart.Edition())
+	n, _ := strconv.Atoi(c.Chart.Edition())
+	return n
 }
 
 // UpdateNumber returns the cell's update number (UPDN from DSID).
+// Returns 0 if the update number cannot be parsed as an integer.
 func (c *Cell) UpdateNumber() int {
-	return parseIntOrZero(c.Chart.UpdateNumber())
+	n, _ := strconv.Atoi(c.Chart.UpdateNumber())
+	return n
 }
 
 // Bounds returns the cell's geographic bounds.
@@ -317,7 +322,18 @@ func extractCoverageAreas(chart *Chart) []CoverageArea {
 			continue
 		}
 
-		catcov := parseInt(catcovVal, 1) // Default to "Coverage Available"
+		// Parse CATCOV value, default to 1 (Coverage Available)
+		catcov := 1
+		switch v := catcovVal.(type) {
+		case int:
+			catcov = v
+		case float64:
+			catcov = int(v)
+		case string:
+			if n, err := strconv.Atoi(v); err == nil {
+				catcov = n
+			}
+		}
 
 		// Get polygon geometry
 		geom := feature.Geometry()
@@ -359,7 +375,16 @@ func extractScaleAreas(chart *Chart) []ScaleArea {
 			continue
 		}
 
-		cscale := parseInt(cscaleVal, 0)
+		// Parse CSCALE value, skip if invalid
+		var cscale int
+		switch v := cscaleVal.(type) {
+		case int:
+			cscale = v
+		case float64:
+			cscale = int(v)
+		case string:
+			cscale, _ = strconv.Atoi(v)
+		}
 		if cscale == 0 {
 			continue
 		}
@@ -417,27 +442,4 @@ func pointInPolygon(lat, lon float64, polygon [][]float64) bool {
 	}
 
 	return inside
-}
-
-// parseIntOrZero parses a string to int, returning 0 on failure.
-func parseIntOrZero(s string) int {
-	var n int
-	fmt.Sscanf(s, "%d", &n)
-	return n
-}
-
-// parseInt parses an attribute value to int, returning defaultVal on failure.
-func parseInt(val interface{}, defaultVal int) int {
-	switch v := val.(type) {
-	case int:
-		return v
-	case float64:
-		return int(v)
-	case string:
-		var n int
-		if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
-			return n
-		}
-	}
-	return defaultVal
 }

@@ -1,9 +1,5 @@
 package parser
 
-import (
-	"fmt"
-)
-
 // constructGeometry builds a Geometry from feature and spatial records
 // S-57 §2.1: Features reference spatial records to build geometry
 func constructGeometry(featureRec *featureRecord, spatialRecords map[spatialKey]*spatialRecord) (Geometry, error) {
@@ -391,25 +387,4 @@ func resolveVectorPointersRecursive(spatial *spatialRecord, spatialRecords map[s
 	}
 
 	return coords
-}
-
-// getGeometryTypeForObjectClass returns the expected geometry type for a given S-57 object class
-// This is a helper for validation and geometry construction
-func getGeometryTypeForObjectClass(objectClass int) (GeometryType, error) {
-	switch objectClass {
-	case 13: // BOYCAR
-		return GeometryTypePoint, nil
-	case 75: // LIGHTS
-		return GeometryTypePoint, nil
-	case 42: // DEPCNT
-		return GeometryTypeLineString, nil
-	case 30: // COALNE
-		return GeometryTypeLineString, nil
-	case 43: // DEPARE
-		return GeometryTypePolygon, nil
-	case 71: // LNDARE
-		return GeometryTypePolygon, nil
-	default:
-		return GeometryTypePoint, fmt.Errorf("unknown object class: %d", objectClass)
-	}
 }

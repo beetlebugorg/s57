@@ -6,25 +6,23 @@ import (
 )
 
 func TestAutoDiscoverUpdates(t *testing.T) {
-	baseFile := "../../testdata/updates/GB5X01SW.000"
+	baseFile := "../../test/US4MD81M/US4MD81M.000"
 
 	updates, err := findUpdateFiles(baseFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Should find .001, .002, .003, .004, .005
-	if len(updates) != 5 {
-		t.Errorf("Expected 5 updates, got %d", len(updates))
+	// Should find .001, .002, .003
+	if len(updates) != 3 {
+		t.Errorf("Expected 3 updates, got %d", len(updates))
 	}
 
 	// Verify they're in order
 	expectedFiles := []string{
-		filepath.Join(filepath.Dir(baseFile), "GB5X01SW.001"),
-		filepath.Join(filepath.Dir(baseFile), "GB5X01SW.002"),
-		filepath.Join(filepath.Dir(baseFile), "GB5X01SW.003"),
-		filepath.Join(filepath.Dir(baseFile), "GB5X01SW.004"),
-		filepath.Join(filepath.Dir(baseFile), "GB5X01SW.005"),
+		filepath.Join(filepath.Dir(baseFile), "US4MD81M.001"),
+		filepath.Join(filepath.Dir(baseFile), "US4MD81M.002"),
+		filepath.Join(filepath.Dir(baseFile), "US4MD81M.003"),
 	}
 
 	for i, expected := range expectedFiles {
@@ -38,15 +36,15 @@ func TestParseWithUpdates(t *testing.T) {
 	parser := NewParser()
 
 	// Parse with updates enabled (default)
-	baseFile := "../../testdata/updates/GB5X01SW.000"
+	baseFile := "../../test/US4MD81M/US4MD81M.000"
 	chart, err := parser.Parse(baseFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify update number reflects latest update
-	if chart.UpdateNumber() != "5" {
-		t.Errorf("Expected update number 5, got %s", chart.UpdateNumber())
+	if chart.UpdateNumber() != "3" {
+		t.Errorf("Expected update number 3, got %s", chart.UpdateNumber())
 	}
 
 	// Verify we have features (basic sanity check)
@@ -60,7 +58,7 @@ func TestParseWithUpdates(t *testing.T) {
 func TestParseWithoutUpdates(t *testing.T) {
 	parser := NewParser()
 
-	baseFile := "../../testdata/updates/GB5X01SW.000"
+	baseFile := "../../test/US4MD81M/US4MD81M.000"
 
 	opts := ParseOptions{
 		ApplyUpdates:        false, // Disable update merging

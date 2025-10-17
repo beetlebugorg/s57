@@ -23,7 +23,7 @@ func BenchmarkParse(b *testing.B) {
 	// Run the parse operation b.N times
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := parser.ParseWithOptions("../../testdata/charts/US5BALAD/US5BALAD.000", opts)
+		_, err := parser.ParseWithOptions("../../test/US4MD81M/US4MD81M.000", opts)
 		if err != nil {
 			b.Fatalf("parse failed: %v", err)
 		}
@@ -219,7 +219,7 @@ func TestParserPopulatesMetadata(t *testing.T) {
 		SkipUnknownFeatures: true,
 		ValidateGeometry:    false,
 	}
-	chart, err := parser.ParseWithOptions("../../testdata/charts/US5BALAD/US5BALAD.000", opts)
+	chart, err := parser.ParseWithOptions("../../test/US4MD81M/US4MD81M.000", opts)
 	if err != nil {
 		t.Fatalf("Failed to parse test file: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestParserPopulatesMetadata(t *testing.T) {
 
 // TestDSIDFieldStructure examines the actual DSID field structure from a real file
 func TestDSIDFieldStructure(t *testing.T) {
-	reader, err := iso8211.NewReader("../../testdata/charts/US5BALAD/US5BALAD.000")
+	reader, err := iso8211.NewReader("../../test/US4MD81M/US4MD81M.000")
 	if err != nil {
 		t.Fatalf("Failed to open test file: %v", err)
 	}

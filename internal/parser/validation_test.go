@@ -199,7 +199,7 @@ func TestValidationBreakdown(t *testing.T) {
 		SkipUnknownFeatures: true,
 		ValidateGeometry:    false,
 	}
-	chart, err := parser.ParseWithOptions("../../testdata/charts/US5BALAD/US5BALAD.000", opts)
+	chart, err := parser.ParseWithOptions("../../test/US4MD81M/US4MD81M.000", opts)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}

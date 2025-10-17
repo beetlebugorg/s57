@@ -222,22 +222,6 @@ func buildChart(data *chartData, metadata *datasetMetadata, params datasetParams
 	}, nil
 }
 
-// extractChartID extracts the chart identifier from DSID record.
-//
-// The DSID record contains dataset metadata including the dataset name (DSNM field),
-// which serves as the unique chart identifier. This is typically formatted as a cell name
-// for ENC data (e.g., "US5MA22M").
-//
-// Reference: S-57 Part 3 §7.3.1.1 (31Main.pdf p3.34, table 7.4): DSID field structure
-// showing DSNM as "Data set name" with variable-length ASCII format.
-func extractChartID(isoFile *iso8211.ISO8211File) string {
-	dsid := extractDSID(isoFile)
-	if dsid != nil && dsid.dsnm != "" {
-		return dsid.dsnm
-	}
-	return "UNKNOWN"
-}
-
 // extractDSID extracts and parses the DSID record from the ISO 8211 file.
 //
 // DSID (Data Set Identification) is the first field in every S-57 dataset's general
