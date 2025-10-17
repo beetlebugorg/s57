@@ -25,3 +25,12 @@ go.work
 # OS files
 .DS_Store
 Thumbs.db
+
+# Documentation example binaries
+docs/examples/*/quick-start
+docs/examples/*/viewport-queries
+docs/examples/*/*
+!docs/examples/*/*.go
+!docs/examples/*/go.mod
+!docs/examples/*/go.sum
+!docs/examples/*/README.md
