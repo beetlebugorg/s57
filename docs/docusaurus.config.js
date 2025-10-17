@@ -7,7 +7,7 @@ const config = {
   tagline: 'Go library for parsing S-57 Electronic Navigational Charts',
   favicon: 'img/favicon.ico',
   url: process.env.DOCUSAURUS_URL || 'https://beetlebugorg.github.io/',
-  baseUrl: process.env.DOCUSAURUS_BASE_URL || '/',
+  baseUrl: process.env.DOCUSAURUS_BASE_URL || '/s57/',
   organizationName: 'beetlebugorg',
   projectName: 's57',
   onBrokenLinks: 'throw',
